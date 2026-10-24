@@ -1,3 +1,9 @@
+export type PostComment = {
+  id: string;
+  authorName: string;
+  content: string;
+};
+
 export type Post = {
   id: string;
   author: {
@@ -11,4 +17,5 @@ export type Post = {
   likes: number;
   likedByViewer: boolean;
   comments: number;
+  recentComments: PostComment[];
 };

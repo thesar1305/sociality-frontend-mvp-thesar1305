@@ -15,6 +15,13 @@ export const posts: Post[] = [
     likes: 24,
     likedByViewer: false,
     comments: 6,
+    recentComments: [
+      {
+        id: 'comment-1',
+        authorName: 'Dimas',
+        content: 'Tampilannya mulai bagus!',
+      },
+    ],
   },
   {
     id: 'post-2',
@@ -30,5 +37,6 @@ export const posts: Post[] = [
     likes: 41,
     likedByViewer: false,
     comments: 9,
+    recentComments: [],
   },
 ];

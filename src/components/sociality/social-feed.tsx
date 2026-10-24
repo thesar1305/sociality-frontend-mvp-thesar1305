@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { PostCard } from '@/components/sociality/post-card';
 import { Button } from '@/components/ui/button';
 import { posts as initialPosts } from '@/data/posts';
-import type { Post } from '@/types/post';
+import type { Post, PostComment } from '@/types/post';
 
 const MAX_POST_LENGTH = 280;
 
@@ -37,6 +37,7 @@ export function SocialFeed() {
       likes: 0,
       likedByViewer: false,
       comments: 0,
+      recentComments: [],
     };
 
     setPosts((currentPosts) => [newPost, ...currentPosts]);
@@ -55,6 +56,25 @@ export function SocialFeed() {
           likedByViewer: !post.likedByViewer,
         };
       })
+    );
+  }
+  function handleAddComment(postId: string, content: string) {
+    const newComment: PostComment = {
+      id: crypto.randomUUID(),
+      authorName: 'Pengguna Sociality',
+      content,
+    };
+
+    setPosts((currentPosts) =>
+      currentPosts.map((post) =>
+        post.id === postId
+          ? {
+              ...post,
+              comments: post.comments + 1,
+              recentComments: [...post.recentComments, newComment],
+            }
+          : post
+      )
     );
   }
   return (
@@ -101,7 +121,12 @@ export function SocialFeed() {
 
       <section aria-label='Daftar postingan' className='space-y-4'>
         {posts.map((post) => (
-          <PostCard key={post.id} post={post} onToggleLike={handleToggleLike} />
+          <PostCard
+            key={post.id}
+            post={post}
+            onToggleLike={handleToggleLike}
+            onAddComment={handleAddComment}
+          />
         ))}
       </section>
     </>
