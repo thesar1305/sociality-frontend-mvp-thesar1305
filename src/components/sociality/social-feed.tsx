@@ -35,13 +35,28 @@ export function SocialFeed() {
       publishedAt: new Date().toISOString(),
       publishedLabel: 'Baru saja',
       likes: 0,
+      likedByViewer: false,
       comments: 0,
     };
 
     setPosts((currentPosts) => [newPost, ...currentPosts]);
     setContent('');
   }
+  function handleToggleLike(postId: string) {
+    setPosts((currentPosts) =>
+      currentPosts.map((post) => {
+        if (post.id !== postId) {
+          return post;
+        }
 
+        return {
+          ...post,
+          likes: post.likes + (post.likedByViewer ? -1 : 1),
+          likedByViewer: !post.likedByViewer,
+        };
+      })
+    );
+  }
   return (
     <>
       <section
@@ -86,7 +101,7 @@ export function SocialFeed() {
 
       <section aria-label='Daftar postingan' className='space-y-4'>
         {posts.map((post) => (
-          <PostCard key={post.id} post={post} />
+          <PostCard key={post.id} post={post} onToggleLike={handleToggleLike} />
         ))}
       </section>
     </>

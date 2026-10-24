@@ -3,9 +3,10 @@ import type { Post } from '@/types/post';
 
 type PostCardProps = {
   post: Post;
+  onToggleLike: (postId: string) => void;
 };
 
-export function PostCard({ post }: PostCardProps) {
+export function PostCard({ post, onToggleLike }: PostCardProps) {
   return (
     <article className='rounded-2xl border bg-card p-5 text-card-foreground shadow-sm'>
       <header className='flex items-start gap-3'>
@@ -30,8 +31,14 @@ export function PostCard({ post }: PostCardProps) {
       <p className='mt-4 whitespace-pre-line leading-7'>{post.content}</p>
 
       <footer className='mt-4 flex gap-2 border-t pt-3'>
-        <Button type='button' variant='ghost' size='sm'>
-          Suka · {post.likes}
+        <Button
+          type='button'
+          variant={post.likedByViewer ? 'secondary' : 'ghost'}
+          size='sm'
+          aria-pressed={post.likedByViewer}
+          onClick={() => onToggleLike(post.id)}
+        >
+          {post.likedByViewer ? 'Disukai' : 'Suka'} · {post.likes}
         </Button>
 
         <Button type='button' variant='ghost' size='sm'>

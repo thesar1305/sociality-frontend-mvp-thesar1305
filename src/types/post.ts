@@ -9,5 +9,6 @@ export type Post = {
   publishedAt: string;
   publishedLabel: string;
   likes: number;
+  likedByViewer: boolean;
   comments: number;
 };
