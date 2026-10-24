@@ -146,6 +146,19 @@ export function SocialFeed() {
     );
   }
 
+  function handleEditPost(postId: string, content: string) {
+    updateStoredPosts((currentPosts) =>
+      currentPosts.map((post) =>
+        post.id === postId && post.isOwnedByViewer
+          ? {
+              ...post,
+              content,
+            }
+          : post
+      )
+    );
+  }
+
   return (
     <>
       <section
@@ -196,6 +209,7 @@ export function SocialFeed() {
             onToggleLike={handleToggleLike}
             onAddComment={handleAddComment}
             onDeletePost={handleDeletePost}
+            onEditPost={handleEditPost}
           />
         ))}
       </section>

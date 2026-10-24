@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import type { Post } from '@/types/post';
 
+const MAX_POST_LENGTH = 280;
 const MAX_COMMENT_LENGTH = 180;
 
 type PostCardProps = {
@@ -13,6 +14,7 @@ type PostCardProps = {
   onToggleLike: (postId: string) => void;
   onAddComment: (postId: string, content: string) => void;
   onDeletePost: (postId: string) => void;
+  onEditPost: (postId: string, content: string) => void;
 };
 
 export function PostCard({
@@ -20,11 +22,17 @@ export function PostCard({
   onToggleLike,
   onAddComment,
   onDeletePost,
+  onEditPost,
 }: PostCardProps) {
   const [isCommenting, setIsCommenting] = useState(false);
   const [commentContent, setCommentContent] = useState('');
+  const [isEditing, setIsEditing] = useState(false);
+  const [editContent, setEditContent] = useState(post.content);
 
   const trimmedComment = commentContent.trim();
+  const trimmedEditContent = editContent.trim();
+  const canSaveEdit =
+    trimmedEditContent.length > 0 && trimmedEditContent !== post.content;
 
   function handleCommentSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -36,6 +44,27 @@ export function PostCard({
     onAddComment(post.id, trimmedComment);
     setCommentContent('');
     setIsCommenting(false);
+  }
+
+  function handleEditSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!canSaveEdit) {
+      return;
+    }
+
+    onEditPost(post.id, trimmedEditContent);
+    setIsEditing(false);
+  }
+
+  function handleEditStart() {
+    setEditContent(post.content);
+    setIsEditing(true);
+  }
+
+  function handleEditCancel() {
+    setEditContent(post.content);
+    setIsEditing(false);
   }
 
   function handleDelete() {
@@ -69,19 +98,73 @@ export function PostCard({
         </div>
 
         {post.isOwnedByViewer && (
-          <Button
-            type='button'
-            variant='ghost'
-            size='sm'
-            className='text-destructive hover:text-destructive'
-            onClick={handleDelete}
-          >
-            Hapus
-          </Button>
+          <div className='flex shrink-0 gap-1'>
+            <Button
+              type='button'
+              variant='ghost'
+              size='sm'
+              disabled={isEditing}
+              onClick={handleEditStart}
+            >
+              Edit
+            </Button>
+
+            <Button
+              type='button'
+              variant='ghost'
+              size='sm'
+              className='text-destructive hover:text-destructive'
+              onClick={handleDelete}
+            >
+              Hapus
+            </Button>
+          </div>
         )}
       </header>
 
-      <p className='mt-4 whitespace-pre-line leading-7'>{post.content}</p>
+      {isEditing ? (
+        <form
+          className='mt-4 rounded-xl border bg-background p-3'
+          onSubmit={handleEditSubmit}
+        >
+          <label htmlFor={`edit-post-${post.id}`} className='sr-only'>
+            Edit isi postingan
+          </label>
+
+          <textarea
+            id={`edit-post-${post.id}`}
+            value={editContent}
+            onChange={(event) => setEditContent(event.target.value)}
+            maxLength={MAX_POST_LENGTH}
+            rows={4}
+            autoFocus
+            className='w-full resize-none bg-transparent outline-none'
+          />
+
+          <div className='mt-2 flex items-center justify-between gap-3'>
+            <span className='text-xs text-muted-foreground'>
+              {editContent.length}/{MAX_POST_LENGTH}
+            </span>
+
+            <div className='flex gap-2'>
+              <Button
+                type='button'
+                variant='ghost'
+                size='sm'
+                onClick={handleEditCancel}
+              >
+                Batal
+              </Button>
+
+              <Button type='submit' size='sm' disabled={!canSaveEdit}>
+                Simpan
+              </Button>
+            </div>
+          </div>
+        </form>
+      ) : (
+        <p className='mt-4 whitespace-pre-line leading-7'>{post.content}</p>
+      )}
 
       <footer className='mt-4 flex gap-2 border-t pt-3'>
         <Button
