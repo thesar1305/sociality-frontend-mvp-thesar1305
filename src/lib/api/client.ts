@@ -22,15 +22,19 @@ apiClient.interceptors.request.use((config) => {
 });
 
 export function getApiErrorMessage(error: unknown) {
-  if (!axios.isAxiosError<ApiErrorResponse>(error)) {
-    return 'Terjadi kesalahan yang tidak diketahui.';
+  if (axios.isAxiosError<ApiErrorResponse>(error)) {
+    const message = error.response?.data?.message;
+
+    if (Array.isArray(message)) {
+      return message.join(', ');
+    }
+
+    return message ?? 'Permintaan ke server gagal.';
   }
 
-  const message = error.response?.data?.message;
-
-  if (Array.isArray(message)) {
-    return message.join(', ');
+  if (error instanceof Error) {
+    return error.message;
   }
 
-  return message ?? 'Permintaan ke server gagal.';
+  return 'Terjadi kesalahan yang tidak diketahui.';
 }
