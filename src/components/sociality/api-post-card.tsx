@@ -1,8 +1,13 @@
 /* eslint-disable @next/next/no-img-element */
+'use client';
 
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import 'dayjs/locale/id';
 
+import { Button } from '@/components/ui/button';
+import { getApiErrorMessage } from '@/lib/api/client';
+import { likePost, unlikePost } from '@/lib/api/posts';
 import type { ApiPost } from '@/types/feed';
 
 type ApiPostCardProps = {
@@ -22,11 +27,29 @@ function getInitials(name: string) {
 }
 
 export function ApiPostCard({ post }: ApiPostCardProps) {
+  const queryClient = useQueryClient();
   const createdAt = dayjs(post.createdAt);
 
   const createdLabel = createdAt.isValid()
     ? createdAt.locale('id').format('D MMMM YYYY, HH.mm')
     : 'Waktu tidak tersedia';
+
+  const likeMutation = useMutation({
+    mutationFn: () =>
+      post.likedByMe ? unlikePost(post.id) : likePost(post.id),
+
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ['posts'],
+      });
+    },
+  });
+
+  function handleLike() {
+    if (!likeMutation.isPending) {
+      likeMutation.mutate();
+    }
+  }
 
   return (
     <article className='overflow-hidden rounded-2xl border bg-card text-card-foreground shadow-sm'>
@@ -62,12 +85,38 @@ export function ApiPostCard({ post }: ApiPostCardProps) {
       />
 
       <div className='p-4'>
-        <div className='flex flex-wrap gap-5 text-sm font-medium'>
-          <span>
-            {post.likedByMe ? 'Disukai' : 'Suka'} · {post.likeCount}
+        <div className='flex flex-wrap items-center gap-3'>
+          <Button
+            type='button'
+            variant={post.likedByMe ? 'default' : 'outline'}
+            disabled={likeMutation.isPending}
+            aria-pressed={post.likedByMe}
+            aria-label={
+              post.likedByMe
+                ? `Batalkan suka pada postingan ${post.author.name}`
+                : `Sukai postingan ${post.author.name}`
+            }
+            onClick={handleLike}
+          >
+            {likeMutation.isPending
+              ? 'Memproses...'
+              : post.likedByMe
+                ? 'Disukai'
+                : 'Suka'}
+          </Button>
+
+          <span className='text-sm font-medium'>{post.likeCount} suka</span>
+
+          <span className='text-sm font-medium'>
+            {post.commentCount} komentar
           </span>
-          <span>Komentar · {post.commentCount}</span>
         </div>
+
+        {likeMutation.isError ? (
+          <p role='alert' className='mt-3 text-sm text-destructive'>
+            {getApiErrorMessage(likeMutation.error)}
+          </p>
+        ) : null}
 
         {post.caption ? (
           <p className='mt-4 leading-7'>

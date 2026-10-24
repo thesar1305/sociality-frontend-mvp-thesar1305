@@ -34,3 +34,14 @@ export async function createPost({ image, caption }: CreatePostValues) {
 
   return response.data;
 }
+export async function likePost(postId: number) {
+  const response = await apiClient.post(`/api/posts/${postId}/like`);
+
+  return response.data;
+}
+
+export async function unlikePost(postId: number) {
+  const response = await apiClient.delete(`/api/posts/${postId}/like`);
+
+  return response.data;
+}
