@@ -11,6 +11,7 @@ export type Post = {
     username: string;
     initials: string;
   };
+  isOwnedByViewer: boolean;
   content: string;
   publishedAt: string;
   publishedLabel: string;

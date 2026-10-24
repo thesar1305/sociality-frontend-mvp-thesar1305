@@ -8,6 +8,7 @@ export const posts: Post[] = [
       username: '@nadiaputri',
       initials: 'NP',
     },
+    isOwnedByViewer: false,
     content:
       'Baru selesai merancang tampilan pertama Sociality. Sedikit demi sedikit, idenya mulai terasa nyata.',
     publishedAt: '2026-10-24T08:30:00+08:00',
@@ -30,6 +31,7 @@ export const posts: Post[] = [
       username: '@rakapratama',
       initials: 'RP',
     },
+    isOwnedByViewer: false,
     content:
       'Belajar membangun produk itu bukan hanya soal menulis kode, tetapi juga memahami masalah yang ingin diselesaikan.',
     publishedAt: '2026-10-23T19:15:00+08:00',

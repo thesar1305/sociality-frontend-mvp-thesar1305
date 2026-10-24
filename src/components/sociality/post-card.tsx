@@ -12,9 +12,15 @@ type PostCardProps = {
   post: Post;
   onToggleLike: (postId: string) => void;
   onAddComment: (postId: string, content: string) => void;
+  onDeletePost: (postId: string) => void;
 };
 
-export function PostCard({ post, onToggleLike, onAddComment }: PostCardProps) {
+export function PostCard({
+  post,
+  onToggleLike,
+  onAddComment,
+  onDeletePost,
+}: PostCardProps) {
   const [isCommenting, setIsCommenting] = useState(false);
   const [commentContent, setCommentContent] = useState('');
 
@@ -30,6 +36,16 @@ export function PostCard({ post, onToggleLike, onAddComment }: PostCardProps) {
     onAddComment(post.id, trimmedComment);
     setCommentContent('');
     setIsCommenting(false);
+  }
+
+  function handleDelete() {
+    const shouldDelete = window.confirm(
+      'Hapus postingan ini? Tindakan ini tidak dapat dibatalkan.'
+    );
+
+    if (shouldDelete) {
+      onDeletePost(post.id);
+    }
   }
 
   return (
@@ -51,6 +67,18 @@ export function PostCard({ post, onToggleLike, onAddComment }: PostCardProps) {
             <time dateTime={post.publishedAt}>{post.publishedLabel}</time>
           </div>
         </div>
+
+        {post.isOwnedByViewer && (
+          <Button
+            type='button'
+            variant='ghost'
+            size='sm'
+            className='text-destructive hover:text-destructive'
+            onClick={handleDelete}
+          >
+            Hapus
+          </Button>
+        )}
       </header>
 
       <p className='mt-4 whitespace-pre-line leading-7'>{post.content}</p>

@@ -39,7 +39,15 @@ function parsePosts(snapshot: string | null): Post[] {
   try {
     const parsedPosts: unknown = JSON.parse(snapshot);
 
-    return Array.isArray(parsedPosts) ? (parsedPosts as Post[]) : initialPosts;
+    if (!Array.isArray(parsedPosts)) {
+      return initialPosts;
+    }
+
+    return (parsedPosts as Post[]).map((post) => ({
+      ...post,
+      isOwnedByViewer:
+        post.isOwnedByViewer ?? post.author.username === currentUser.username,
+    }));
   } catch {
     return initialPosts;
   }
@@ -82,6 +90,7 @@ export function SocialFeed() {
         username: currentUser.username,
         initials: currentUser.initials,
       },
+      isOwnedByViewer: true,
       content: trimmedContent,
       publishedAt: new Date().toISOString(),
       publishedLabel: 'Baru saja',
@@ -129,6 +138,11 @@ export function SocialFeed() {
             }
           : post
       )
+    );
+  }
+  function handleDeletePost(postId: string) {
+    updateStoredPosts((currentPosts) =>
+      currentPosts.filter((post) => post.id !== postId || !post.isOwnedByViewer)
     );
   }
 
@@ -181,6 +195,7 @@ export function SocialFeed() {
             post={post}
             onToggleLike={handleToggleLike}
             onAddComment={handleAddComment}
+            onDeletePost={handleDeletePost}
           />
         ))}
       </section>
