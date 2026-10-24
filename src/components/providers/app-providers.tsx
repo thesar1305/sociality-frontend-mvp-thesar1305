@@ -1,7 +1,11 @@
 'use client';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Provider } from 'react-redux';
 import { useState, type ReactNode } from 'react';
+
+import { SessionBootstrap } from '@/components/providers/session-bootstrap';
+import { store } from '@/lib/store/store';
 
 type AppProvidersProps = {
   children: ReactNode;
@@ -25,6 +29,11 @@ export function AppProviders({ children }: AppProvidersProps) {
   );
 
   return (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    <Provider store={store}>
+      <QueryClientProvider client={queryClient}>
+        <SessionBootstrap />
+        {children}
+      </QueryClientProvider>
+    </Provider>
   );
 }
