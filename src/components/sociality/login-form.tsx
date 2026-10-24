@@ -11,17 +11,21 @@ import { Button } from '@/components/ui/button';
 import { loginUser } from '@/lib/api/auth';
 import { getApiErrorMessage } from '@/lib/api/client';
 import { saveAccessToken } from '@/lib/auth/storage';
-import { setSession } from '@/lib/store/auth-slice';
-import { useAppDispatch, useAppSelector } from '@/lib/store/hooks';
+
+import { useAppSelector } from '@/lib/store/hooks';
 import { loginSchema, type LoginFormValues } from '@/lib/validation/auth';
 import { extractAccessToken } from '@/types/auth';
 
 const inputClassName =
   'h-11 w-full rounded-xl border border-zinc-700 bg-zinc-900 px-3 text-sm text-white outline-none transition placeholder:text-zinc-500 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20';
 
-export function LoginForm() {
+type LoginFormProps = {
+  registrationSuccess?: boolean;
+};
+
+export function LoginForm({ registrationSuccess = false }: LoginFormProps) {
   const router = useRouter();
-  const dispatch = useAppDispatch();
+
   const { isAuthenticated, isHydrated } = useAppSelector((state) => state.auth);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -45,8 +49,7 @@ export function LoginForm() {
     },
     onSuccess: (token) => {
       saveAccessToken(token);
-      dispatch(setSession(token));
-      router.replace('/');
+      window.location.replace('/');
     },
     onError: (error) => {
       setFormError(getApiErrorMessage(error));
@@ -66,6 +69,14 @@ export function LoginForm() {
 
   return (
     <form className='space-y-5' onSubmit={onSubmit} noValidate>
+      {registrationSuccess ? (
+        <p
+          role='status'
+          className='rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-300'
+        >
+          Akun berhasil dibuat. Silakan masuk.
+        </p>
+      ) : null}
       {formError ? (
         <p
           role='alert'

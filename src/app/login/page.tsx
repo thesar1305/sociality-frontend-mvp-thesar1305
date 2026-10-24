@@ -8,7 +8,10 @@ export const metadata: Metadata = {
   description: 'Masuk ke akun Sociality.',
 };
 
-export default function LoginPage() {
+export default async function LoginPage({ searchParams }: LoginPageProps) {
+  const { registered } = await searchParams;
+  const registrationSuccess = registered === '1';
+
   return (
     <main className='relative flex min-h-screen items-center justify-center overflow-hidden bg-zinc-950 px-4 py-10 text-white'>
       <div className='absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(124,58,237,0.28),_transparent_42%)]' />
@@ -50,10 +53,16 @@ export default function LoginPage() {
               Gunakan email dan kata sandi yang telah terdaftar.
             </p>
 
-            <LoginForm />
+            <LoginForm registrationSuccess={registrationSuccess} />
           </div>
         </div>
       </section>
     </main>
   );
 }
+
+type LoginPageProps = {
+  searchParams: Promise<{
+    registered?: string | string[];
+  }>;
+};
