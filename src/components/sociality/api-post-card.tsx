@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { getApiErrorMessage } from '@/lib/api/client';
 import { likePost, unlikePost } from '@/lib/api/posts';
 import type { ApiPost } from '@/types/feed';
+import { PostComments } from '@/components/sociality/post-comments';
 
 type ApiPostCardProps = {
   post: ApiPost;
@@ -106,10 +107,6 @@ export function ApiPostCard({ post }: ApiPostCardProps) {
           </Button>
 
           <span className='text-sm font-medium'>{post.likeCount} suka</span>
-
-          <span className='text-sm font-medium'>
-            {post.commentCount} komentar
-          </span>
         </div>
 
         {likeMutation.isError ? (
@@ -124,6 +121,7 @@ export function ApiPostCard({ post }: ApiPostCardProps) {
             {post.caption}
           </p>
         ) : null}
+        <PostComments postId={post.id} commentCount={post.commentCount} />
       </div>
     </article>
   );
