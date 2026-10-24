@@ -1,6 +1,6 @@
 import Link from 'next/link';
 
-import { SocialFeed } from '@/components/sociality/social-feed';
+import { ApiFeed } from '@/components/sociality/api-feed';
 import { ThemeToggle } from '@/components/sociality/theme-toggle';
 import { AuthNavigation } from '@/components/sociality/auth-navigation';
 import { ProtectedRoute } from '@/components/sociality/protected-route';
@@ -26,7 +26,7 @@ export default function Home() {
         </header>
 
         <main className='mx-auto w-full max-w-2xl space-y-5 px-4 py-6'>
-          <SocialFeed />
+          <ApiFeed />
         </main>
       </div>
     </ProtectedRoute>
