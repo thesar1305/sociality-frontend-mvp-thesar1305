@@ -5,6 +5,10 @@ import dayjs from 'dayjs';
 import 'dayjs/locale/id';
 
 import { getMyProfile } from '@/lib/api/profile';
+import { useState } from 'react';
+
+import { EditProfileForm } from '@/components/sociality/edit-profile-form';
+import { Button } from '@/components/ui/button';
 
 function getInitials(name: string) {
   const initials = name
@@ -22,6 +26,7 @@ export function MyProfile() {
     queryKey: ['me'],
     queryFn: getMyProfile,
   });
+  const [isEditing, setIsEditing] = useState(false);
 
   if (!profileQuery.data) {
     return (
@@ -40,6 +45,15 @@ export function MyProfile() {
     ? `Bergabung ${joinedAt.locale('id').format('MMMM YYYY')}`
     : 'Tanggal bergabung tidak tersedia';
 
+  if (isEditing) {
+    return (
+      <EditProfileForm
+        profile={profile}
+        onCancel={() => setIsEditing(false)}
+        onSaved={() => setIsEditing(false)}
+      />
+    );
+  }
   return (
     <article className='overflow-hidden rounded-2xl border bg-card text-card-foreground shadow-sm'>
       <div className='h-32 bg-gradient-to-r from-violet-950 via-violet-700 to-fuchsia-600' />
@@ -58,9 +72,21 @@ export function MyProfile() {
           )}
         </div>
 
-        <div className='mt-4'>
-          <h2 className='text-2xl font-bold'>{profile.name}</h2>
-          <p className='text-muted-foreground'>@{profile.username}</p>
+        <div className='mt-4 flex flex-wrap items-start justify-between gap-4'>
+          <div>
+            <h2 className='text-3xl font-bold'>{profile.name}</h2>
+            <p className='mt-1 text-lg text-muted-foreground'>
+              @{profile.username}
+            </p>
+          </div>
+
+          <Button
+            type='button'
+            variant='outline'
+            onClick={() => setIsEditing(true)}
+          >
+            Edit profil
+          </Button>
         </div>
 
         <p className='mt-4 max-w-lg leading-7'>
