@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 
 import { currentUser } from '@/data/profile';
+import { ThemeToggle } from '@/components/sociality/theme-toggle';
 
 export const metadata: Metadata = {
   title: 'Profil | Sociality',
@@ -21,6 +22,9 @@ export default function ProfilePage() {
           </Link>
 
           <h1 className='text-lg font-bold'>Profil</h1>
+          <div className='ml-auto'>
+            <ThemeToggle />
+          </div>
         </div>
       </header>
 
