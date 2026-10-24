@@ -26,3 +26,23 @@ export const updateProfileSchema = z.object({
 });
 
 export type UpdateProfileFormValues = z.infer<typeof updateProfileSchema>;
+
+export const AVATAR_MAX_SIZE = 5 * 1024 * 1024;
+
+export const AVATAR_ACCEPTED_TYPES = [
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+] as const;
+
+export function validateAvatarFile(file: File) {
+  if (!(AVATAR_ACCEPTED_TYPES as readonly string[]).includes(file.type)) {
+    return 'Avatar harus berformat PNG, JPG, atau WEBP.';
+  }
+
+  if (file.size > AVATAR_MAX_SIZE) {
+    return 'Ukuran avatar maksimal 5 MB.';
+  }
+
+  return null;
+}

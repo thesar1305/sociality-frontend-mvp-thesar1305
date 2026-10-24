@@ -1,31 +1,21 @@
 'use client';
 
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import 'dayjs/locale/id';
 
-import { getMyProfile } from '@/lib/api/profile';
-import { useState } from 'react';
-
+import { AvatarUpload } from '@/components/sociality/avatar-upload';
 import { EditProfileForm } from '@/components/sociality/edit-profile-form';
 import { Button } from '@/components/ui/button';
-
-function getInitials(name: string) {
-  const initials = name
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((part) => part.charAt(0).toUpperCase())
-    .join('');
-
-  return initials || 'S';
-}
+import { getMyProfile } from '@/lib/api/profile';
 
 export function MyProfile() {
   const profileQuery = useQuery({
     queryKey: ['me'],
     queryFn: getMyProfile,
   });
+
   const [isEditing, setIsEditing] = useState(false);
 
   if (!profileQuery.data) {
@@ -41,6 +31,7 @@ export function MyProfile() {
 
   const { profile, stats } = profileQuery.data.data;
   const joinedAt = dayjs(profile.createdAt);
+
   const joinedLabel = joinedAt.isValid()
     ? `Bergabung ${joinedAt.locale('id').format('MMMM YYYY')}`
     : 'Tanggal bergabung tidak tersedia';
@@ -54,23 +45,13 @@ export function MyProfile() {
       />
     );
   }
+
   return (
     <article className='overflow-hidden rounded-2xl border bg-card text-card-foreground shadow-sm'>
       <div className='h-32 bg-gradient-to-r from-violet-950 via-violet-700 to-fuchsia-600' />
 
       <div className='px-5 pb-5'>
-        <div className='-mt-12 flex size-24 items-center justify-center overflow-hidden rounded-full border-4 border-card bg-primary text-2xl font-bold text-primary-foreground'>
-          {profile.avatarUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={profile.avatarUrl}
-              alt={`Avatar ${profile.name}`}
-              className='size-full object-cover'
-            />
-          ) : (
-            getInitials(profile.name)
-          )}
-        </div>
+        <AvatarUpload profile={profile} />
 
         <div className='mt-4 flex flex-wrap items-start justify-between gap-4'>
           <div>

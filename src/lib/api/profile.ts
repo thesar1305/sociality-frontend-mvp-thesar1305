@@ -12,3 +12,12 @@ export async function updateMyProfile(values: UpdateProfileFormValues) {
   const response = await apiClient.patch('/api/me', values);
   return response.data;
 }
+export async function updateMyAvatar(file: File) {
+  const formData = new FormData();
+
+  formData.append('avatar', file);
+
+  const response = await apiClient.patch('/api/me', formData);
+
+  return response.data;
+}
