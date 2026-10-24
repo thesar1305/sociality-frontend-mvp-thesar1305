@@ -4,20 +4,27 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation } from '@tanstack/react-query';
 import Link from 'next/link';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 
 import { Button } from '@/components/ui/button';
 import { registerUser } from '@/lib/api/auth';
 import { getApiErrorMessage } from '@/lib/api/client';
 import { registerSchema, type RegisterFormValues } from '@/lib/validation/auth';
+import { useAppSelector } from '@/lib/store/hooks';
 
 const inputClassName =
   'h-11 w-full rounded-xl border border-zinc-700 bg-zinc-900 px-3 text-sm text-white outline-none transition placeholder:text-zinc-500 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20';
 
 export function RegisterForm() {
   const [formError, setFormError] = useState<string | null>(null);
+  const { isAuthenticated, isHydrated } = useAppSelector((state) => state.auth);
 
+  useEffect(() => {
+    if (isHydrated && isAuthenticated) {
+      window.location.replace('/');
+    }
+  }, [isAuthenticated, isHydrated]);
   const {
     register,
     handleSubmit,

@@ -2,6 +2,7 @@ import Link from 'next/link';
 
 import { SocialFeed } from '@/components/sociality/social-feed';
 import { ThemeToggle } from '@/components/sociality/theme-toggle';
+import { AuthNavigation } from '@/components/sociality/auth-navigation';
 
 export default function Home() {
   return (
@@ -14,13 +15,7 @@ export default function Home() {
 
           <nav aria-label='Navigasi utama' className='flex items-center gap-2'>
             <ThemeToggle />
-
-            <Link
-              href='/profile'
-              className='inline-flex h-8 items-center justify-center rounded-lg border bg-background px-3 text-sm font-medium transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50'
-            >
-              Profil
-            </Link>
+            <AuthNavigation />
           </nav>
         </div>
       </header>

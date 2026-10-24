@@ -3,6 +3,7 @@ import Link from 'next/link';
 
 import { currentUser } from '@/data/profile';
 import { ThemeToggle } from '@/components/sociality/theme-toggle';
+import { AuthNavigation } from '@/components/sociality/auth-navigation';
 
 export const metadata: Metadata = {
   title: 'Profil | Sociality',
@@ -22,8 +23,10 @@ export default function ProfilePage() {
           </Link>
 
           <h1 className='text-lg font-bold'>Profil</h1>
-          <div className='ml-auto'>
+
+          <div className='ml-auto flex items-center gap-2'>
             <ThemeToggle />
+            <AuthNavigation showProfileLink={false} />
           </div>
         </div>
       </header>
