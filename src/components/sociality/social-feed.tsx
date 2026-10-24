@@ -7,6 +7,7 @@ import { PostCard } from '@/components/sociality/post-card';
 import { Button } from '@/components/ui/button';
 import { posts as initialPosts } from '@/data/posts';
 import type { Post, PostComment } from '@/types/post';
+import { currentUser } from '@/data/profile';
 
 const MAX_POST_LENGTH = 280;
 
@@ -27,9 +28,9 @@ export function SocialFeed() {
     const newPost: Post = {
       id: crypto.randomUUID(),
       author: {
-        name: 'Pengguna Sociality',
-        username: '@socialityuser',
-        initials: 'PS',
+        name: currentUser.name,
+        username: currentUser.username,
+        initials: currentUser.initials,
       },
       content: trimmedContent,
       publishedAt: new Date().toISOString(),
@@ -61,7 +62,7 @@ export function SocialFeed() {
   function handleAddComment(postId: string, content: string) {
     const newComment: PostComment = {
       id: crypto.randomUUID(),
-      authorName: 'Pengguna Sociality',
+      authorName: currentUser.name,
       content,
     };
 

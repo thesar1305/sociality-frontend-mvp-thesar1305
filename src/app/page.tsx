@@ -1,7 +1,6 @@
 import Link from 'next/link';
 
 import { SocialFeed } from '@/components/sociality/social-feed';
-import { Button } from '@/components/ui/button';
 
 export default function Home() {
   return (
@@ -12,9 +11,12 @@ export default function Home() {
             Sociality
           </Link>
 
-          <Button type='button' variant='outline' size='sm'>
+          <Link
+            href='/profile'
+            className='inline-flex h-8 items-center justify-center rounded-lg border bg-background px-3 text-sm font-medium transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50'
+          >
             Profil
-          </Button>
+          </Link>
         </div>
       </header>
 
