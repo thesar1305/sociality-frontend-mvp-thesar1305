@@ -1,18 +1,68 @@
 'use client';
 
 import type { FormEvent } from 'react';
-import { useState } from 'react';
+import { useMemo, useState, useSyncExternalStore } from 'react';
 
 import { PostCard } from '@/components/sociality/post-card';
 import { Button } from '@/components/ui/button';
 import { posts as initialPosts } from '@/data/posts';
-import type { Post, PostComment } from '@/types/post';
 import { currentUser } from '@/data/profile';
+import type { Post, PostComment } from '@/types/post';
 
 const MAX_POST_LENGTH = 280;
+const POSTS_STORAGE_KEY = 'sociality:posts:v1';
+const POSTS_UPDATED_EVENT = 'sociality:posts-updated';
+
+function subscribeToPosts(callback: () => void) {
+  window.addEventListener('storage', callback);
+  window.addEventListener(POSTS_UPDATED_EVENT, callback);
+
+  return () => {
+    window.removeEventListener('storage', callback);
+    window.removeEventListener(POSTS_UPDATED_EVENT, callback);
+  };
+}
+
+function getPostsSnapshot() {
+  return window.localStorage.getItem(POSTS_STORAGE_KEY);
+}
+
+function getServerPostsSnapshot() {
+  return null;
+}
+
+function parsePosts(snapshot: string | null): Post[] {
+  if (!snapshot) {
+    return initialPosts;
+  }
+
+  try {
+    const parsedPosts: unknown = JSON.parse(snapshot);
+
+    return Array.isArray(parsedPosts) ? (parsedPosts as Post[]) : initialPosts;
+  } catch {
+    return initialPosts;
+  }
+}
+
+function updateStoredPosts(update: (currentPosts: Post[]) => Post[]) {
+  const currentPosts = parsePosts(getPostsSnapshot());
+  const nextPosts = update(currentPosts);
+
+  window.localStorage.setItem(POSTS_STORAGE_KEY, JSON.stringify(nextPosts));
+
+  window.dispatchEvent(new Event(POSTS_UPDATED_EVENT));
+}
 
 export function SocialFeed() {
-  const [posts, setPosts] = useState<Post[]>(initialPosts);
+  const postsSnapshot = useSyncExternalStore(
+    subscribeToPosts,
+    getPostsSnapshot,
+    getServerPostsSnapshot
+  );
+
+  const posts = useMemo(() => parsePosts(postsSnapshot), [postsSnapshot]);
+
   const [content, setContent] = useState('');
 
   const trimmedContent = content.trim();
@@ -41,11 +91,13 @@ export function SocialFeed() {
       recentComments: [],
     };
 
-    setPosts((currentPosts) => [newPost, ...currentPosts]);
+    updateStoredPosts((currentPosts) => [newPost, ...currentPosts]);
+
     setContent('');
   }
+
   function handleToggleLike(postId: string) {
-    setPosts((currentPosts) =>
+    updateStoredPosts((currentPosts) =>
       currentPosts.map((post) => {
         if (post.id !== postId) {
           return post;
@@ -59,14 +111,15 @@ export function SocialFeed() {
       })
     );
   }
-  function handleAddComment(postId: string, content: string) {
+
+  function handleAddComment(postId: string, comment: string) {
     const newComment: PostComment = {
       id: crypto.randomUUID(),
       authorName: currentUser.name,
-      content,
+      content: comment,
     };
 
-    setPosts((currentPosts) =>
+    updateStoredPosts((currentPosts) =>
       currentPosts.map((post) =>
         post.id === postId
           ? {
@@ -78,6 +131,7 @@ export function SocialFeed() {
       )
     );
   }
+
   return (
     <>
       <section
