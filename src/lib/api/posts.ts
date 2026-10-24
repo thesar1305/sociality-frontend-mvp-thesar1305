@@ -16,3 +16,21 @@ export async function getPosts({ page = 1, limit = 10 }: GetPostsOptions = {}) {
 
   return response.data;
 }
+export type CreatePostValues = {
+  image: File;
+  caption: string;
+};
+
+export async function createPost({ image, caption }: CreatePostValues) {
+  const formData = new FormData();
+
+  formData.append('image', image);
+
+  if (caption.trim()) {
+    formData.append('caption', caption.trim());
+  }
+
+  const response = await apiClient.post('/api/posts', formData);
+
+  return response.data;
+}

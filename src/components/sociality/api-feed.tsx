@@ -7,6 +7,7 @@ import { ApiPostCard } from '@/components/sociality/api-post-card';
 import { Button } from '@/components/ui/button';
 import { getApiErrorMessage } from '@/lib/api/client';
 import { getPosts } from '@/lib/api/posts';
+import { CreatePostForm } from '@/components/sociality/create-post-form';
 
 const POSTS_PER_PAGE = 10;
 
@@ -68,6 +69,8 @@ export function ApiFeed() {
           Postingan terbaru dari komunitas Sociality.
         </p>
       </div>
+
+      <CreatePostForm onCreated={() => setPage(1)} />
 
       {posts.length > 0 ? (
         <div className='space-y-5'>
