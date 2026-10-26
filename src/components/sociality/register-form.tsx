@@ -8,10 +8,12 @@ import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 
 import { Button } from '@/components/ui/button';
-import { registerUser } from '@/lib/api/auth';
-import { getApiErrorMessage } from '@/lib/api/client';
+import { loginUser, registerUser } from '@/lib/api/auth';
+
 import { registerSchema, type RegisterFormValues } from '@/lib/validation/auth';
 import { useAppSelector } from '@/lib/store/hooks';
+import { saveAccessToken } from '@/lib/auth/storage';
+import { extractAccessToken } from '@/types/auth';
 
 const inputClassName =
   'h-11 w-full rounded-xl border border-zinc-700 bg-zinc-900 px-3 text-sm text-white outline-none transition placeholder:text-zinc-500 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20';
@@ -42,12 +44,19 @@ export function RegisterForm() {
   });
 
   const registerMutation = useMutation({
-    mutationFn: registerUser,
-    onSuccess: () => {
-      window.location.replace('/login?registered=1');
+    mutationFn: async (values: RegisterFormValues) => {
+      await registerUser(values);
+
+      const loginResponse = await loginUser({
+        email: values.email,
+        password: values.password,
+      });
+
+      return extractAccessToken(loginResponse);
     },
-    onError: (error) => {
-      setFormError(getApiErrorMessage(error));
+    onSuccess: (accessToken) => {
+      saveAccessToken(accessToken);
+      window.location.replace('/feed');
     },
   });
 

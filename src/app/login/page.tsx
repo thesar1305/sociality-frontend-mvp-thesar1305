@@ -9,8 +9,14 @@ export const metadata: Metadata = {
 };
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
-  const { registered } = await searchParams;
+  const { registered, next } = await searchParams;
   const registrationSuccess = registered === '1';
+  const requestedPath = typeof next === 'string' ? next : '/feed';
+
+  const redirectTo =
+    requestedPath.startsWith('/') && !requestedPath.startsWith('//')
+      ? requestedPath
+      : '/feed';
 
   return (
     <main className='relative flex min-h-screen items-center justify-center overflow-hidden bg-zinc-950 px-4 py-10 text-white'>
@@ -53,7 +59,10 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
               Gunakan email dan kata sandi yang telah terdaftar.
             </p>
 
-            <LoginForm registrationSuccess={registrationSuccess} />
+            <LoginForm
+              registrationSuccess={registrationSuccess}
+              redirectTo={redirectTo}
+            />
           </div>
         </div>
       </section>
@@ -63,6 +72,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 
 type LoginPageProps = {
   searchParams: Promise<{
-    registered?: string | string[];
+    registered?: string;
+    next?: string;
   }>;
 };

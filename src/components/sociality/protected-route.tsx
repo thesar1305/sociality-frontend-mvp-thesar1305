@@ -9,6 +9,7 @@ import { getMyProfile } from '@/lib/api/profile';
 import { removeAccessToken } from '@/lib/auth/storage';
 import { clearSession } from '@/lib/store/auth-slice';
 import { useAppDispatch, useAppSelector } from '@/lib/store/hooks';
+import { usePathname } from 'next/navigation';
 
 type ProtectedRouteProps = {
   children: ReactNode;
@@ -18,7 +19,8 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const dispatch = useAppDispatch();
   const queryClient = useQueryClient();
   const { isAuthenticated, isHydrated } = useAppSelector((state) => state.auth);
-
+  const pathname = usePathname();
+  const loginUrl = `/login?next=${encodeURIComponent(pathname)}`;
   const profileQuery = useQuery({
     queryKey: ['me'],
     queryFn: getMyProfile,
@@ -32,9 +34,9 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
 
   useEffect(() => {
     if (isHydrated && !isAuthenticated) {
-      window.location.replace('/login');
+      window.location.replace(loginUrl);
     }
-  }, [isAuthenticated, isHydrated]);
+  }, [isAuthenticated, isHydrated, loginUrl]);
 
   useEffect(() => {
     if (!isUnauthorized) {
@@ -44,8 +46,8 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     removeAccessToken();
     queryClient.clear();
     dispatch(clearSession());
-    window.location.replace('/login');
-  }, [dispatch, isUnauthorized, queryClient]);
+    window.location.replace(loginUrl);
+  }, [dispatch, isUnauthorized, loginUrl, queryClient]);
 
   if (
     !isHydrated ||

@@ -31,3 +31,12 @@ export type PostsResponse = {
     pagination: FeedPagination;
   };
 };
+
+export type PrivateFeedResponse = {
+  success: boolean;
+  message: string;
+  data: {
+    items: ApiPost[];
+    pagination: FeedPagination;
+  };
+};

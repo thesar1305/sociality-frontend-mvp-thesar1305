@@ -1,5 +1,5 @@
 import { apiClient } from '@/lib/api/client';
-import type { PostsResponse } from '@/types/feed';
+import type { PostsResponse, PrivateFeedResponse } from '@/types/feed';
 
 type GetPostsOptions = {
   page?: number;
@@ -8,6 +8,17 @@ type GetPostsOptions = {
 
 export async function getPosts({ page = 1, limit = 10 }: GetPostsOptions = {}) {
   const response = await apiClient.get<PostsResponse>('/api/posts', {
+    params: {
+      page,
+      limit,
+    },
+  });
+
+  return response.data;
+}
+
+export async function getFeed({ page = 1, limit = 10 }: GetPostsOptions = {}) {
+  const response = await apiClient.get<PrivateFeedResponse>('/api/feed', {
     params: {
       page,
       limit,

@@ -21,9 +21,13 @@ const inputClassName =
 
 type LoginFormProps = {
   registrationSuccess?: boolean;
+  redirectTo?: string;
 };
 
-export function LoginForm({ registrationSuccess = false }: LoginFormProps) {
+export function LoginForm({
+  registrationSuccess = false,
+  redirectTo = '/feed',
+}: LoginFormProps) {
   const router = useRouter();
 
   const { isAuthenticated, isHydrated } = useAppSelector((state) => state.auth);
@@ -49,7 +53,7 @@ export function LoginForm({ registrationSuccess = false }: LoginFormProps) {
     },
     onSuccess: (token) => {
       saveAccessToken(token);
-      window.location.replace('/');
+      window.location.replace(redirectTo);
     },
     onError: (error) => {
       setFormError(getApiErrorMessage(error));

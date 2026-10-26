@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { ApiPostCard } from '@/components/sociality/api-post-card';
 import { Button } from '@/components/ui/button';
 import { getApiErrorMessage } from '@/lib/api/client';
-import { getPosts } from '@/lib/api/posts';
+import { getFeed } from '@/lib/api/posts';
 import { CreatePostForm } from '@/components/sociality/create-post-form';
 
 const POSTS_PER_PAGE = 10;
@@ -15,9 +15,9 @@ export function ApiFeed() {
   const [page, setPage] = useState(1);
 
   const postsQuery = useQuery({
-    queryKey: ['posts', page, POSTS_PER_PAGE],
+    queryKey: ['posts', 'feed', page, POSTS_PER_PAGE],
     queryFn: () =>
-      getPosts({
+      getFeed({
         page,
         limit: POSTS_PER_PAGE,
       }),
@@ -56,17 +56,17 @@ export function ApiFeed() {
     );
   }
 
-  const { posts, pagination } = postsQuery.data.data;
+  const { items: posts, pagination } = postsQuery.data.data;
   const totalPages = Math.max(pagination.totalPages, 1);
 
   return (
     <section aria-labelledby='feed-heading' className='space-y-5'>
       <div>
         <h1 id='feed-heading' className='text-3xl font-bold'>
-          Jelajahi postingan
+          Feed
         </h1>
         <p className='mt-2 text-muted-foreground'>
-          Postingan terbaru dari komunitas Sociality.
+          Postingan terbaru darimu dan pengguna yang kamu ikuti.
         </p>
       </div>
 
@@ -80,7 +80,8 @@ export function ApiFeed() {
         </div>
       ) : (
         <div className='rounded-2xl border bg-card p-8 text-center text-muted-foreground'>
-          Belum ada postingan pada halaman ini.
+          Belum ada postingan di feed. Ikuti pengguna lain atau buat postingan
+          pertamamu.
         </div>
       )}
 
