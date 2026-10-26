@@ -117,7 +117,10 @@ export function CreatePostForm({ onCreated }: CreatePostFormProps) {
   }
 
   return (
-    <section className='rounded-2xl border bg-card p-5 text-card-foreground shadow-sm'>
+    <section
+      id='create-post'
+      className='scroll-mt-24 rounded-2xl border bg-card p-5 text-card-foreground shadow-sm'
+    >
       <div>
         <h2 className='text-xl font-bold'>Buat postingan</h2>
         <p className='mt-1 text-sm text-muted-foreground'>

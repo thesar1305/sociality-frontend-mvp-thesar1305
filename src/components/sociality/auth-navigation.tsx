@@ -57,7 +57,7 @@ export function AuthNavigation({
   return (
     <>
       {showProfileLink ? (
-        <Link href='/profile' className={linkClassName}>
+        <Link href='/me' className={linkClassName}>
           Profil
         </Link>
       ) : null}

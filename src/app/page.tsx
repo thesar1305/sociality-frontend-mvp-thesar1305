@@ -1,34 +1,5 @@
-import Link from 'next/link';
-
-import { ApiFeed } from '@/components/sociality/api-feed';
-import { ThemeToggle } from '@/components/sociality/theme-toggle';
-import { AuthNavigation } from '@/components/sociality/auth-navigation';
-import { ProtectedRoute } from '@/components/sociality/protected-route';
+import { redirect } from 'next/navigation';
 
 export default function Home() {
-  return (
-    <ProtectedRoute>
-      <div className='min-h-screen bg-muted/40'>
-        <header className='sticky top-0 z-10 border-b bg-background/95 backdrop-blur'>
-          <div className='mx-auto flex h-16 max-w-2xl items-center justify-between px-4'>
-            <Link href='/' className='text-xl font-bold tracking-tight'>
-              Sociality
-            </Link>
-
-            <nav
-              aria-label='Navigasi utama'
-              className='flex items-center gap-2'
-            >
-              <ThemeToggle />
-              <AuthNavigation />
-            </nav>
-          </div>
-        </header>
-
-        <main className='mx-auto w-full max-w-2xl space-y-5 px-4 py-6'>
-          <ApiFeed />
-        </main>
-      </div>
-    </ProtectedRoute>
-  );
+  redirect('/feed');
 }
