@@ -1,6 +1,6 @@
 'use client';
 
-import { Home, Plus, UserRound } from 'lucide-react';
+import { Home, Plus, Search, UserRound } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { type ReactNode, useEffect } from 'react';
@@ -55,6 +55,13 @@ export function AppShell({ children }: AppShellProps) {
           </Link>
 
           <div className='flex items-center gap-2'>
+            <Link
+              href='/search'
+              aria-label='Cari pengguna'
+              className='inline-flex size-10 items-center justify-center rounded-xl border bg-background transition hover:bg-accent'
+            >
+              <Search className='size-5' aria-hidden='true' />
+            </Link>
             <ThemeToggle />
             <AuthNavigation showProfileLink={false} />
           </div>
