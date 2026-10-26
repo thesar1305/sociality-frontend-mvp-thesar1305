@@ -40,3 +40,8 @@ export type PrivateFeedResponse = {
     pagination: FeedPagination;
   };
 };
+export type PostDetailResponse = {
+  success: boolean;
+  message: string;
+  data: ApiPost;
+};

@@ -1,5 +1,9 @@
 import { apiClient } from '@/lib/api/client';
-import type { PostsResponse, PrivateFeedResponse } from '@/types/feed';
+import type {
+  PostDetailResponse,
+  PostsResponse,
+  PrivateFeedResponse,
+} from '@/types/feed';
 
 type GetPostsOptions = {
   page?: number;
@@ -53,6 +57,20 @@ export async function likePost(postId: number) {
 
 export async function unlikePost(postId: number) {
   const response = await apiClient.delete(`/api/posts/${postId}/like`);
+
+  return response.data;
+}
+
+export async function getPostDetail(postId: number) {
+  const response = await apiClient.get<PostDetailResponse>(
+    `/api/posts/${postId}`
+  );
+
+  return response.data;
+}
+
+export async function deletePost(postId: number) {
+  const response = await apiClient.delete(`/api/posts/${postId}`);
 
   return response.data;
 }

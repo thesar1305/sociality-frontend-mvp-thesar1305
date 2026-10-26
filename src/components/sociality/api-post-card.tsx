@@ -10,6 +10,7 @@ import { getApiErrorMessage } from '@/lib/api/client';
 import { likePost, unlikePost } from '@/lib/api/posts';
 import type { ApiPost } from '@/types/feed';
 import { PostComments } from '@/components/sociality/post-comments';
+import Link from 'next/link';
 
 type ApiPostCardProps = {
   post: ApiPost;
@@ -114,6 +115,13 @@ export function ApiPostCard({ post }: ApiPostCardProps) {
             {getApiErrorMessage(likeMutation.error)}
           </p>
         ) : null}
+
+        <Link
+          href={`/posts/${post.id}`}
+          className='inline-flex text-sm font-medium text-violet-500 transition hover:text-violet-400'
+        >
+          Lihat detail
+        </Link>
 
         {post.caption ? (
           <p className='mt-4 leading-7'>
