@@ -1,6 +1,6 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
@@ -8,7 +8,13 @@ import { useState } from 'react';
 import { ApiPostCard } from '@/components/sociality/api-post-card';
 import { Button } from '@/components/ui/button';
 import { getApiErrorMessage } from '@/lib/api/client';
-import { getPublicProfile, getUserPosts } from '@/lib/api/users';
+import {
+  followUser,
+  getPublicProfile,
+  getUserPosts,
+  unfollowUser,
+} from '@/lib/api/users';
+import type { PublicProfileResponse } from '@/types/user';
 
 const POSTS_PER_PAGE = 10;
 
@@ -29,9 +35,12 @@ type PublicUserProfileProps = {
 
 export function PublicUserProfile({ username }: PublicUserProfileProps) {
   const [page, setPage] = useState(1);
+  const queryClient = useQueryClient();
+
+  const profileQueryKey = ['users', 'profile', username] as const;
 
   const profileQuery = useQuery({
-    queryKey: ['users', 'profile', username],
+    queryKey: profileQueryKey,
     queryFn: () => getPublicProfile(username),
   });
 
@@ -43,6 +52,72 @@ export function PublicUserProfile({ username }: PublicUserProfileProps) {
         page,
         limit: POSTS_PER_PAGE,
       }),
+  });
+  const followMutation = useMutation({
+    mutationFn: ({ shouldFollow }: { shouldFollow: boolean }) =>
+      shouldFollow ? followUser(username) : unfollowUser(username),
+
+    onMutate: async ({ shouldFollow }) => {
+      await queryClient.cancelQueries({
+        queryKey: profileQueryKey,
+      });
+
+      const previousProfile =
+        queryClient.getQueryData<PublicProfileResponse>(profileQueryKey);
+
+      queryClient.setQueryData<PublicProfileResponse>(
+        profileQueryKey,
+        (currentProfile) => {
+          if (!currentProfile) {
+            return currentProfile;
+          }
+
+          const followerChange = shouldFollow ? 1 : -1;
+
+          return {
+            ...currentProfile,
+            data: {
+              ...currentProfile.data,
+              isFollowing: shouldFollow,
+              counts: {
+                ...currentProfile.data.counts,
+                followers: Math.max(
+                  currentProfile.data.counts.followers + followerChange,
+                  0
+                ),
+              },
+            },
+          };
+        }
+      );
+
+      return {
+        previousProfile,
+      };
+    },
+
+    onError: (_error, _variables, context) => {
+      if (context?.previousProfile) {
+        queryClient.setQueryData(profileQueryKey, context.previousProfile);
+      }
+    },
+
+    onSettled: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: profileQueryKey,
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ['users', 'search'],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ['posts', 'feed'],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ['me'],
+        }),
+      ]);
+    },
   });
 
   if (profileQuery.isPending || postsQuery.isPending) {
@@ -130,9 +205,22 @@ export function PublicUserProfile({ username }: PublicUserProfileProps) {
                 Profil saya
               </Link>
             ) : (
-              <span className='rounded-full border px-3 py-1 text-sm text-muted-foreground'>
-                {profile.isFollowing ? 'Sudah diikuti' : 'Belum diikuti'}
-              </span>
+              <Button
+                type='button'
+                variant={profile.isFollowing ? 'outline' : 'default'}
+                disabled={followMutation.isPending}
+                onClick={() =>
+                  followMutation.mutate({
+                    shouldFollow: !profile.isFollowing,
+                  })
+                }
+              >
+                {followMutation.isPending
+                  ? 'Memproses...'
+                  : profile.isFollowing
+                    ? 'Berhenti mengikuti'
+                    : 'Ikuti'}
+              </Button>
             )}
           </div>
 
@@ -163,6 +251,15 @@ export function PublicUserProfile({ username }: PublicUserProfileProps) {
           </dl>
         </div>
       </article>
+
+      {followMutation.isError ? (
+        <p
+          role='alert'
+          className='rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive'
+        >
+          {getApiErrorMessage(followMutation.error)}
+        </p>
+      ) : null}
 
       <div>
         <h2 className='text-2xl font-bold'>Postingan</h2>

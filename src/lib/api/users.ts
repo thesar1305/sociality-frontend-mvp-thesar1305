@@ -61,3 +61,18 @@ export async function searchUsers({
 
   return response.data;
 }
+export async function followUser(username: string) {
+  const response = await apiClient.post(
+    `/api/follow/${encodeURIComponent(username)}`
+  );
+
+  return response.data;
+}
+
+export async function unfollowUser(username: string) {
+  const response = await apiClient.delete(
+    `/api/follow/${encodeURIComponent(username)}`
+  );
+
+  return response.data;
+}
