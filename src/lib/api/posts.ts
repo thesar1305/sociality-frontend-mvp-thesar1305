@@ -3,6 +3,7 @@ import type {
   PostDetailResponse,
   PostsResponse,
   PrivateFeedResponse,
+  SavedPostsResponse,
 } from '@/types/feed';
 
 type GetPostsOptions = {
@@ -71,6 +72,31 @@ export async function getPostDetail(postId: number) {
 
 export async function deletePost(postId: number) {
   const response = await apiClient.delete(`/api/posts/${postId}`);
+
+  return response.data;
+}
+export async function getSavedPosts({
+  page = 1,
+  limit = 10,
+}: GetPostsOptions = {}) {
+  const response = await apiClient.get<SavedPostsResponse>('/api/me/saved', {
+    params: {
+      page,
+      limit,
+    },
+  });
+
+  return response.data;
+}
+
+export async function savePost(postId: number) {
+  const response = await apiClient.post(`/api/posts/${postId}/save`);
+
+  return response.data;
+}
+
+export async function unsavePost(postId: number) {
+  const response = await apiClient.delete(`/api/posts/${postId}/save`);
 
   return response.data;
 }

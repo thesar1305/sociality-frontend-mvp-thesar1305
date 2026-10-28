@@ -54,13 +54,14 @@ export function MyProfile() {
       <div className='px-5 pb-5'>
         <AvatarUpload profile={profile} />
 
-        <div className='mt-4 flex flex-wrap items-start justify-between gap-4'>
-          <div>
-            <h2 className='text-3xl font-bold'>{profile.name}</h2>
-            <p className='mt-1 text-lg text-muted-foreground'>
-              @{profile.username}
-            </p>
-          </div>
+        <div className='flex flex-wrap gap-2'>
+          <Link
+            href='/me/saved'
+            prefetch={false}
+            className='inline-flex h-9 items-center justify-center rounded-md border bg-background px-4 text-sm font-medium transition hover:bg-accent'
+          >
+            Tersimpan
+          </Link>
 
           <Button
             type='button'

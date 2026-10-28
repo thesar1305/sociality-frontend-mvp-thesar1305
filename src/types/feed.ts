@@ -45,3 +45,18 @@ export type PostDetailResponse = {
   message: string;
   data: ApiPost;
 };
+export type SavedPost = {
+  id: number;
+  imageUrl: string;
+  caption: string | null;
+  createdAt: string;
+};
+
+export type SavedPostsResponse = {
+  success: boolean;
+  message: string;
+  data: {
+    posts: SavedPost[];
+    pagination: FeedPagination;
+  };
+};

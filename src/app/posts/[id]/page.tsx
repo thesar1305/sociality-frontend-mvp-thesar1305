@@ -14,11 +14,22 @@ type PostPageProps = {
   params: Promise<{
     id: string;
   }>;
+  searchParams: Promise<{
+    from?: string;
+  }>;
 };
 
-export default async function PostPage({ params }: PostPageProps) {
-  const { id } = await params;
+export default async function PostPage({
+  params,
+  searchParams,
+}: PostPageProps) {
+  const [{ id }, { from }] = await Promise.all([params, searchParams]);
   const postId = Number(id);
+  const cameFromSaved = from === 'saved';
+
+  const backHref = cameFromSaved ? '/me/saved' : '/feed';
+
+  const backLabel = cameFromSaved ? 'Kembali ke tersimpan' : 'Kembali ke feed';
 
   if (!Number.isInteger(postId) || postId <= 0) {
     notFound();
@@ -27,7 +38,7 @@ export default async function PostPage({ params }: PostPageProps) {
   return (
     <ProtectedRoute>
       <AppShell>
-        <PostDetail postId={postId} />
+        <PostDetail postId={postId} backHref={backHref} backLabel={backLabel} />
       </AppShell>
     </ProtectedRoute>
   );

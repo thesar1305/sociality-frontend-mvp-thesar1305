@@ -1,19 +1,27 @@
 /* eslint-disable @next/next/no-img-element */
 'use client';
 
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import 'dayjs/locale/id';
+import { Bookmark } from 'lucide-react';
+import Link from 'next/link';
 
+import { PostComments } from '@/components/sociality/post-comments';
 import { Button } from '@/components/ui/button';
 import { getApiErrorMessage } from '@/lib/api/client';
-import { likePost, unlikePost } from '@/lib/api/posts';
+import {
+  getSavedPosts,
+  likePost,
+  savePost,
+  unlikePost,
+  unsavePost,
+} from '@/lib/api/posts';
 import type { ApiPost } from '@/types/feed';
-import { PostComments } from '@/components/sociality/post-comments';
-import Link from 'next/link';
 
 type ApiPostCardProps = {
   post: ApiPost;
+  showDetailLink?: boolean;
 };
 
 function getInitials(name: string) {
@@ -28,8 +36,24 @@ function getInitials(name: string) {
   );
 }
 
-export function ApiPostCard({ post }: ApiPostCardProps) {
+export function ApiPostCard({ post, showDetailLink = true }: ApiPostCardProps) {
   const queryClient = useQueryClient();
+
+  const savedPostsQuery = useQuery({
+    queryKey: ['posts', 'saved', 'lookup'],
+    queryFn: () =>
+      getSavedPosts({
+        page: 1,
+        limit: 50,
+      }),
+    staleTime: 30_000,
+  });
+
+  const isSaved =
+    savedPostsQuery.data?.data.posts.some(
+      (savedPost) => savedPost.id === post.id
+    ) ?? false;
+
   const createdAt = dayjs(post.createdAt);
 
   const createdLabel = createdAt.isValid()
@@ -47,9 +71,29 @@ export function ApiPostCard({ post }: ApiPostCardProps) {
     },
   });
 
+  const saveMutation = useMutation({
+    mutationFn: () => (isSaved ? unsavePost(post.id) : savePost(post.id)),
+
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: ['posts', 'saved'],
+      });
+    },
+  });
+
   function handleLike() {
     if (!likeMutation.isPending) {
       likeMutation.mutate();
+    }
+  }
+
+  function handleSave() {
+    if (
+      !savedPostsQuery.isPending &&
+      !savedPostsQuery.isError &&
+      !saveMutation.isPending
+    ) {
+      saveMutation.mutate();
     }
   }
 
@@ -107,6 +151,34 @@ export function ApiPostCard({ post }: ApiPostCardProps) {
                 : 'Suka'}
           </Button>
 
+          <Button
+            type='button'
+            variant={isSaved ? 'default' : 'outline'}
+            aria-pressed={isSaved}
+            aria-label={
+              isSaved
+                ? `Batalkan simpan postingan ${post.author.name}`
+                : `Simpan postingan ${post.author.name}`
+            }
+            disabled={
+              savedPostsQuery.isPending ||
+              savedPostsQuery.isError ||
+              saveMutation.isPending
+            }
+            onClick={handleSave}
+          >
+            <Bookmark
+              className={isSaved ? 'size-4 fill-current' : 'size-4'}
+              aria-hidden='true'
+            />
+
+            {saveMutation.isPending
+              ? 'Memproses...'
+              : isSaved
+                ? 'Tersimpan'
+                : 'Simpan'}
+          </Button>
+
           <span className='text-sm font-medium'>{post.likeCount} suka</span>
         </div>
 
@@ -116,12 +188,28 @@ export function ApiPostCard({ post }: ApiPostCardProps) {
           </p>
         ) : null}
 
-        <Link
-          href={`/posts/${post.id}`}
-          className='inline-flex text-sm font-medium text-violet-500 transition hover:text-violet-400'
-        >
-          Lihat detail
-        </Link>
+        {savedPostsQuery.isError ? (
+          <p role='alert' className='mt-3 text-sm text-destructive'>
+            Status simpan tidak dapat dimuat:{' '}
+            {getApiErrorMessage(savedPostsQuery.error)}
+          </p>
+        ) : null}
+
+        {saveMutation.isError ? (
+          <p role='alert' className='mt-3 text-sm text-destructive'>
+            {getApiErrorMessage(saveMutation.error)}
+          </p>
+        ) : null}
+
+        {showDetailLink ? (
+          <Link
+            href={`/posts/${post.id}`}
+            prefetch={false}
+            className='mt-3 inline-flex text-sm font-medium text-violet-500 transition hover:text-violet-400'
+          >
+            Lihat detail
+          </Link>
+        ) : null}
 
         {post.caption ? (
           <p className='mt-4 leading-7'>
@@ -129,6 +217,7 @@ export function ApiPostCard({ post }: ApiPostCardProps) {
             {post.caption}
           </p>
         ) : null}
+
         <PostComments postId={post.id} commentCount={post.commentCount} />
       </div>
     </article>

@@ -13,9 +13,11 @@ import { getMyProfile } from '@/lib/api/profile';
 
 type PostDetailProps = {
   postId: number;
+  backHref: string;
+  backLabel: string;
 };
 
-export function PostDetail({ postId }: PostDetailProps) {
+export function PostDetail({ postId, backHref, backLabel }: PostDetailProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
 
@@ -96,11 +98,11 @@ export function PostDetail({ postId }: PostDetailProps) {
     <section aria-labelledby='post-detail-heading' className='space-y-5'>
       <div className='flex items-center justify-between gap-4'>
         <Link
-          href='/feed'
+          href={backHref}
           className='inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition hover:text-foreground'
         >
           <ArrowLeft className='size-4' aria-hidden='true' />
-          Kembali ke feed
+          {backLabel}
         </Link>
 
         {isOwner ? (
@@ -111,7 +113,7 @@ export function PostDetail({ postId }: PostDetailProps) {
             onClick={handleDelete}
           >
             <Trash2 className='size-4' aria-hidden='true' />
-            {deleteMutation.isPending ? 'Menghapus...' : 'Hapus'}
+            {deleteMutation.isPending ? 'Menghapus...' : 'Hapus postingan'}
           </Button>
         ) : null}
       </div>
@@ -129,7 +131,7 @@ export function PostDetail({ postId }: PostDetailProps) {
         </p>
       ) : null}
 
-      <ApiPostCard post={post} />
+      <ApiPostCard post={post} showDetailLink={false} />
     </section>
   );
 }
