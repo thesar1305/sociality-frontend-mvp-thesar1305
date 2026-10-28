@@ -50,3 +50,14 @@ export type UserSearchResponse = {
     pagination: FeedPagination;
   };
 };
+
+export type UserConnectionKind = 'followers' | 'following';
+
+export type UserConnectionsResponse = {
+  success: boolean;
+  message: string;
+  data: {
+    users: UserSearchItem[];
+    pagination: FeedPagination;
+  };
+};

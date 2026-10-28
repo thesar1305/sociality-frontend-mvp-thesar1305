@@ -116,6 +116,9 @@ export function PublicUserProfile({ username }: PublicUserProfileProps) {
         queryClient.invalidateQueries({
           queryKey: ['me'],
         }),
+        queryClient.invalidateQueries({
+          queryKey: ['users', 'connections'],
+        }),
       ]);
     },
   });
@@ -236,12 +239,28 @@ export function PublicUserProfile({ username }: PublicUserProfileProps) {
 
             <div className='p-3'>
               <dt className='text-sm text-muted-foreground'>Pengikut</dt>
-              <dd className='mt-1 font-bold'>{profile.counts.followers}</dd>
+              <dd className='mt-1 font-bold'>
+                <Link
+                  href={`/users/${encodeURIComponent(profile.username)}/followers`}
+                  className='rounded text-violet-500 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500'
+                  aria-label={`Lihat ${profile.counts.followers} pengikut`}
+                >
+                  {profile.counts.followers}
+                </Link>
+              </dd>
             </div>
 
             <div className='p-3'>
               <dt className='text-sm text-muted-foreground'>Mengikuti</dt>
-              <dd className='mt-1 font-bold'>{profile.counts.following}</dd>
+              <dd className='mt-1 font-bold'>
+                <Link
+                  href={`/users/${encodeURIComponent(profile.username)}/following`}
+                  className='rounded text-violet-500 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500'
+                  aria-label={`Lihat ${profile.counts.following} akun yang diikuti`}
+                >
+                  {profile.counts.following}
+                </Link>
+              </dd>
             </div>
 
             <div className='p-3'>

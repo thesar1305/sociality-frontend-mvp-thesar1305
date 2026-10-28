@@ -3,6 +3,8 @@ import type {
   PublicProfileResponse,
   UserPostsResponse,
   UserSearchResponse,
+  UserConnectionKind,
+  UserConnectionsResponse,
 } from '@/types/user';
 
 type GetUserPostsOptions = {
@@ -10,7 +12,31 @@ type GetUserPostsOptions = {
   page?: number;
   limit?: number;
 };
+type GetUserConnectionsOptions = {
+  username: string;
+  kind: UserConnectionKind;
+  page?: number;
+  limit?: number;
+};
 
+export async function getUserConnections({
+  username,
+  kind,
+  page = 1,
+  limit = 10,
+}: GetUserConnectionsOptions) {
+  const response = await apiClient.get<UserConnectionsResponse>(
+    `/api/users/${encodeURIComponent(username)}/${kind}`,
+    {
+      params: {
+        page,
+        limit,
+      },
+    }
+  );
+
+  return response.data;
+}
 export async function getPublicProfile(username: string) {
   const response = await apiClient.get<PublicProfileResponse>(
     `/api/users/${encodeURIComponent(username)}`
@@ -72,6 +98,29 @@ export async function followUser(username: string) {
 export async function unfollowUser(username: string) {
   const response = await apiClient.delete(
     `/api/follow/${encodeURIComponent(username)}`
+  );
+
+  return response.data;
+}
+type GetMyConnectionsOptions = {
+  kind: UserConnectionKind;
+  page?: number;
+  limit?: number;
+};
+
+export async function getMyConnections({
+  kind,
+  page = 1,
+  limit = 10,
+}: GetMyConnectionsOptions) {
+  const response = await apiClient.get<UserConnectionsResponse>(
+    `/api/me/${kind}`,
+    {
+      params: {
+        page,
+        limit,
+      },
+    }
   );
 
   return response.data;

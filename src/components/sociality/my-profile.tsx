@@ -9,6 +9,7 @@ import { AvatarUpload } from '@/components/sociality/avatar-upload';
 import { EditProfileForm } from '@/components/sociality/edit-profile-form';
 import { Button } from '@/components/ui/button';
 import { getMyProfile } from '@/lib/api/profile';
+import Link from 'next/link';
 
 export function MyProfile() {
   const profileQuery = useQuery({
@@ -84,12 +85,28 @@ export function MyProfile() {
 
           <div className='p-3'>
             <dt className='text-sm text-muted-foreground'>Pengikut</dt>
-            <dd className='mt-1 font-bold'>{stats.followers}</dd>
+            <dd className='mt-1 font-bold'>
+              <Link
+                href='/me/followers'
+                className='rounded text-violet-500 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500'
+                aria-label={`Lihat ${stats.followers} pengikut`}
+              >
+                {stats.followers}
+              </Link>
+            </dd>
           </div>
 
           <div className='p-3'>
             <dt className='text-sm text-muted-foreground'>Mengikuti</dt>
-            <dd className='mt-1 font-bold'>{stats.following}</dd>
+            <dd className='mt-1 font-bold'>
+              <Link
+                href='/me/following'
+                className='rounded text-violet-500 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500'
+                aria-label={`Lihat ${stats.following} akun yang diikuti`}
+              >
+                {stats.following}
+              </Link>
+            </dd>
           </div>
 
           <div className='p-3'>
