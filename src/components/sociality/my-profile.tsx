@@ -62,6 +62,13 @@ export function MyProfile() {
           >
             Tersimpan
           </Link>
+          <Link
+            href='/me/likes'
+            prefetch={false}
+            className='inline-flex h-9 items-center justify-center rounded-md border bg-background px-4 text-sm font-medium transition hover:bg-accent'
+          >
+            Disukai
+          </Link>
 
           <Button
             type='button'

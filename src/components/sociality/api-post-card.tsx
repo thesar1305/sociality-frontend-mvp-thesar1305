@@ -17,11 +17,12 @@ import {
   unlikePost,
   unsavePost,
 } from '@/lib/api/posts';
-import type { ApiPost } from '@/types/feed';
+import type { ApiPost, PostsResponse } from '@/types/feed';
 
 type ApiPostCardProps = {
   post: ApiPost;
   showDetailLink?: boolean;
+  detailSource?: 'liked';
 };
 
 function getInitials(name: string) {
@@ -36,7 +37,11 @@ function getInitials(name: string) {
   );
 }
 
-export function ApiPostCard({ post, showDetailLink = true }: ApiPostCardProps) {
+export function ApiPostCard({
+  post,
+  showDetailLink = true,
+  detailSource,
+}: ApiPostCardProps) {
   const queryClient = useQueryClient();
 
   const savedPostsQuery = useQuery({
@@ -64,13 +69,47 @@ export function ApiPostCard({ post, showDetailLink = true }: ApiPostCardProps) {
     mutationFn: () =>
       post.likedByMe ? unlikePost(post.id) : likePost(post.id),
 
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({
+    onSuccess: () => {
+      if (post.likedByMe) {
+        queryClient.setQueriesData<PostsResponse>(
+          {
+            queryKey: ['posts', 'liked'],
+          },
+          (currentData) => {
+            if (!currentData) {
+              return currentData;
+            }
+
+            const postExists = currentData.data.posts.some(
+              (likedPost) => likedPost.id === post.id
+            );
+
+            if (!postExists) {
+              return currentData;
+            }
+
+            return {
+              ...currentData,
+              data: {
+                ...currentData.data,
+                posts: currentData.data.posts.filter(
+                  (likedPost) => likedPost.id !== post.id
+                ),
+                pagination: {
+                  ...currentData.data.pagination,
+                  total: Math.max(currentData.data.pagination.total - 1, 0),
+                },
+              },
+            };
+          }
+        );
+      }
+
+      void queryClient.invalidateQueries({
         queryKey: ['posts'],
       });
     },
   });
-
   const saveMutation = useMutation({
     mutationFn: () => (isSaved ? unsavePost(post.id) : savePost(post.id)),
 
@@ -179,7 +218,14 @@ export function ApiPostCard({ post, showDetailLink = true }: ApiPostCardProps) {
                 : 'Simpan'}
           </Button>
 
-          <span className='text-sm font-medium'>{post.likeCount} suka</span>
+          <Link
+            href={`/posts/${post.id}/likes`}
+            prefetch={false}
+            className='rounded text-sm font-medium text-violet-500 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500'
+            aria-label={`Lihat ${post.likeCount} pengguna yang menyukai postingan ini`}
+          >
+            {post.likeCount} suka
+          </Link>
         </div>
 
         {likeMutation.isError ? (
@@ -203,7 +249,11 @@ export function ApiPostCard({ post, showDetailLink = true }: ApiPostCardProps) {
 
         {showDetailLink ? (
           <Link
-            href={`/posts/${post.id}`}
+            href={
+              detailSource === 'liked'
+                ? `/posts/${post.id}?from=liked`
+                : `/posts/${post.id}`
+            }
             prefetch={false}
             className='mt-3 inline-flex text-sm font-medium text-violet-500 transition hover:text-violet-400'
           >

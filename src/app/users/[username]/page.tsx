@@ -14,13 +14,35 @@ type UserProfilePageProps = {
   params: Promise<{
     username: string;
   }>;
+  searchParams: Promise<{
+    from?: string;
+    postId?: string;
+  }>;
 };
 
 export default async function UserProfilePage({
   params,
+  searchParams,
 }: UserProfilePageProps) {
-  const { username } = await params;
+  const [{ username }, { from, postId }] = await Promise.all([
+    params,
+    searchParams,
+  ]);
   const normalizedUsername = username.trim();
+  const numericPostId = Number(postId);
+
+  const cameFromPostLikers =
+    from === 'post-likers' &&
+    Number.isInteger(numericPostId) &&
+    numericPostId > 0;
+
+  const backHref = cameFromPostLikers
+    ? `/posts/${numericPostId}/likes`
+    : '/search';
+
+  const backLabel = cameFromPostLikers
+    ? 'Kembali ke daftar penyuka'
+    : 'Kembali ke pencarian';
 
   if (!normalizedUsername) {
     notFound();
@@ -29,7 +51,11 @@ export default async function UserProfilePage({
   return (
     <ProtectedRoute>
       <AppShell>
-        <PublicUserProfile username={normalizedUsername} />
+        <PublicUserProfile
+          username={normalizedUsername}
+          backHref={backHref}
+          backLabel={backLabel}
+        />
       </AppShell>
     </ProtectedRoute>
   );

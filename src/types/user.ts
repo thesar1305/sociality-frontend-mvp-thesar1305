@@ -61,3 +61,16 @@ export type UserConnectionsResponse = {
     pagination: FeedPagination;
   };
 };
+export type PostLiker = UserSearchItem & {
+  isMe: boolean;
+  followsMe: boolean;
+};
+
+export type PostLikersResponse = {
+  success: boolean;
+  message: string;
+  data: {
+    users: PostLiker[];
+    pagination: FeedPagination;
+  };
+};

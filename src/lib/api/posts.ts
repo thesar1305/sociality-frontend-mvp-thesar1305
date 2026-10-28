@@ -5,7 +5,7 @@ import type {
   PrivateFeedResponse,
   SavedPostsResponse,
 } from '@/types/feed';
-
+import type { PostLikersResponse } from '@/types/user';
 type GetPostsOptions = {
   page?: number;
   limit?: number;
@@ -89,6 +89,20 @@ export async function getSavedPosts({
   return response.data;
 }
 
+export async function getMyLikedPosts({
+  page = 1,
+  limit = 10,
+}: GetPostsOptions = {}) {
+  const response = await apiClient.get<PostsResponse>('/api/me/likes', {
+    params: {
+      page,
+      limit,
+    },
+  });
+
+  return response.data;
+}
+
 export async function savePost(postId: number) {
   const response = await apiClient.post(`/api/posts/${postId}/save`);
 
@@ -97,6 +111,29 @@ export async function savePost(postId: number) {
 
 export async function unsavePost(postId: number) {
   const response = await apiClient.delete(`/api/posts/${postId}/save`);
+
+  return response.data;
+}
+type GetPostLikersOptions = {
+  postId: number;
+  page?: number;
+  limit?: number;
+};
+
+export async function getPostLikers({
+  postId,
+  page = 1,
+  limit = 10,
+}: GetPostLikersOptions) {
+  const response = await apiClient.get<PostLikersResponse>(
+    `/api/posts/${postId}/likes`,
+    {
+      params: {
+        page,
+        limit,
+      },
+    }
+  );
 
   return response.data;
 }

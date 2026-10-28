@@ -31,9 +31,15 @@ function getInitials(name: string) {
 
 type PublicUserProfileProps = {
   username: string;
+  backHref?: string;
+  backLabel?: string;
 };
 
-export function PublicUserProfile({ username }: PublicUserProfileProps) {
+export function PublicUserProfile({
+  username,
+  backHref = '/search',
+  backLabel = 'Kembali ke pencarian',
+}: PublicUserProfileProps) {
   const [page, setPage] = useState(1);
   const queryClient = useQueryClient();
 
@@ -165,11 +171,12 @@ export function PublicUserProfile({ username }: PublicUserProfileProps) {
   return (
     <section aria-labelledby='public-profile-heading' className='space-y-6'>
       <Link
-        href='/search'
+        href={backHref}
+        prefetch={false}
         className='inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition hover:text-foreground'
       >
         <ArrowLeft className='size-4' aria-hidden='true' />
-        Kembali ke pencarian
+        {backLabel}
       </Link>
 
       <article className='overflow-hidden rounded-2xl border bg-card shadow-sm'>
