@@ -9,7 +9,10 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState } from 'react';
 
-import { PostComments, SafeImage } from '@/components/sociality/post-comments';
+import {
+  PostCommentsDialog,
+  SafeImage,
+} from '@/components/sociality/post-comments';
 import { PostLikersDialog } from '@/components/sociality/post-likers-dialog';
 import { getApiErrorMessage } from '@/lib/api/client';
 import {
@@ -90,7 +93,6 @@ export function ApiPostCard({
     ? createdAt.locale('id').format('D MMMM YYYY, HH.mm')
     : undefined;
 
-  const [commentsOpen, setCommentsOpen] = useState(false);
   const [captionExpanded, setCaptionExpanded] = useState(false);
   const [shared, setShared] = useState(false);
 
@@ -357,17 +359,15 @@ export function ApiPostCard({
             </PostLikersDialog>
           </span>
 
-          <button
-            type='button'
-            aria-expanded={commentsOpen}
-            aria-controls={`comments-${post.id}`}
-            aria-label={`Komentar, ${post.commentCount} komentar`}
+          <PostCommentsDialog
+            postId={post.id}
+            postAuthorId={post.author.id}
             className={actionButtonClassName}
-            onClick={() => setCommentsOpen((current) => !current)}
+            aria-label={`Komentar, ${post.commentCount} komentar`}
           >
             <MessageCircle className='size-6' aria-hidden='true' />
             <span className='font-medium'>{post.commentCount}</span>
-          </button>
+          </PostCommentsDialog>
 
           <button
             type='button'
@@ -452,15 +452,6 @@ export function ApiPostCard({
           ) : null}
         </div>
       ) : null}
-
-      <PostComments
-        postId={post.id}
-        postAuthorId={post.author.id}
-        commentCount={post.commentCount}
-        open={commentsOpen}
-        onOpenChange={setCommentsOpen}
-        hideToggle
-      />
     </article>
   );
 }

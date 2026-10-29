@@ -1,14 +1,37 @@
 /* eslint-disable @next/next/no-img-element */
 'use client';
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  type InfiniteData,
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import 'dayjs/locale/id';
+import relativeTime from 'dayjs/plugin/relativeTime';
+import { SmilePlus } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { type FormEvent, type ReactNode, useState } from 'react';
+import {
+  type FormEvent,
+  type ReactNode,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { Skeleton } from '@/components/ui/skeleton';
 import { getApiErrorMessage } from '@/lib/api/client';
 import {
   addPostComment,
@@ -19,14 +42,38 @@ import { getMyProfile } from '@/lib/api/profile';
 import { useAppSelector } from '@/lib/store/hooks';
 import type { ApiComment, CommentsResponse } from '@/types/comment';
 
-type PostCommentsProps = {
+type PostCommentsDialogProps = {
   postId: number;
   postAuthorId?: number;
-  commentCount: number;
-  open?: boolean;
-  onOpenChange?: (open: boolean) => void;
-  hideToggle?: boolean;
+  className?: string;
+  'aria-label'?: string;
+  children: ReactNode;
 };
+
+type CommentsData = InfiniteData<CommentsResponse, number>;
+
+dayjs.extend(relativeTime);
+
+const EMOJIS = [
+  '😀',
+  '😂',
+  '😍',
+  '🥰',
+  '😎',
+  '🤩',
+  '😅',
+  '😭',
+  '😮',
+  '😡',
+  '👍',
+  '👏',
+  '🙏',
+  '🔥',
+  '❤️',
+  '🎉',
+  '✨',
+  '💯',
+];
 
 const COMMENTS_PER_PAGE = 10;
 const COMMENT_MAX_LENGTH = 180;
@@ -69,36 +116,82 @@ export function SafeImage({ src, alt, className, fallback }: SafeImageProps) {
   );
 }
 
-export function PostComments({
+export function PostCommentsDialog({
   postId,
   postAuthorId,
-  commentCount,
+  className,
+  children,
+  ...triggerProps
+}: PostCommentsDialogProps) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger className={className} {...triggerProps}>
+        {children}
+      </DialogTrigger>
+
+      <DialogContent className='top-auto bottom-0 left-0 h-[85dvh] w-full max-w-none translate-x-0 translate-y-0 rounded-b-none sm:top-1/2 sm:bottom-auto sm:left-1/2 sm:h-[36rem] sm:max-w-lg sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl'>
+        <DialogHeader>
+          <DialogTitle>Komentar</DialogTitle>
+          <DialogDescription className='sr-only'>
+            Daftar komentar dan kolom untuk menambahkan komentar.
+          </DialogDescription>
+        </DialogHeader>
+
+        <CommentsPanel
+          postId={postId}
+          postAuthorId={postAuthorId}
+          open={open}
+        />
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function CommentsPanel({
+  postId,
+  postAuthorId,
   open,
-  onOpenChange,
-  hideToggle = false,
-}: PostCommentsProps) {
+}: {
+  postId: number;
+  postAuthorId?: number;
+  open: boolean;
+}) {
   const queryClient = useQueryClient();
   const pathname = usePathname();
   const { isAuthenticated, isHydrated } = useAppSelector((state) => state.auth);
   const isGuest = isHydrated && !isAuthenticated;
 
-  const [internalOpen, setInternalOpen] = useState(false);
-  const isOpen = open ?? internalOpen;
-  const setIsOpen = onOpenChange ?? setInternalOpen;
-  const [page, setPage] = useState(1);
+  const listRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const [text, setText] = useState('');
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [emojiOpen, setEmojiOpen] = useState(false);
 
-  const commentsQuery = useQuery({
-    queryKey: ['comments', postId, page, COMMENTS_PER_PAGE],
-    queryFn: () =>
+  const commentsKey = [
+    'comments',
+    postId,
+    'infinite',
+    COMMENTS_PER_PAGE,
+  ] as const;
+
+  const commentsQuery = useInfiniteQuery({
+    queryKey: commentsKey,
+    initialPageParam: 1,
+    queryFn: ({ pageParam }) =>
       getPostComments({
         postId,
-        page,
+        page: pageParam,
         limit: COMMENTS_PER_PAGE,
       }),
-    enabled: isOpen,
+    getNextPageParam: (lastPage) => {
+      const { page, totalPages } = lastPage.data.pagination;
+
+      return page < totalPages ? page + 1 : undefined;
+    },
+    enabled: open,
   });
+
   const profileQuery = useQuery({
     queryKey: ['me'],
     queryFn: getMyProfile,
@@ -117,20 +210,34 @@ export function PostComments({
     );
   }
 
+  const comments = useMemo(() => {
+    const seen = new Set<number>();
+    const uniqueComments: ApiComment[] = [];
+
+    for (const page of commentsQuery.data?.pages ?? []) {
+      for (const comment of page.data.comments) {
+        if (!seen.has(comment.id)) {
+          seen.add(comment.id);
+          uniqueComments.push(comment);
+        }
+      }
+    }
+
+    return uniqueComments;
+  }, [commentsQuery.data]);
+
   const addCommentMutation = useMutation({
     mutationFn: (commentText: string) => addPostComment(postId, commentText),
 
     onMutate: async (commentText) => {
-      const firstPageKey = ['comments', postId, 1, COMMENTS_PER_PAGE];
-
       await queryClient.cancelQueries({ queryKey: ['comments', postId] });
 
       const previousComments =
-        queryClient.getQueryData<CommentsResponse>(firstPageKey);
+        queryClient.getQueryData<CommentsData>(commentsKey);
       const profile = profileQuery.data?.data.profile;
 
       setText('');
-      setPage(1);
+      setEmojiOpen(false);
 
       if (previousComments && profile) {
         const optimisticComment: ApiComment = {
@@ -144,45 +251,77 @@ export function PostComments({
             avatarUrl: profile.avatarUrl,
           },
         };
-        const { pagination } = previousComments.data;
-        const nextTotal = pagination.total + 1;
 
-        queryClient.setQueryData<CommentsResponse>(firstPageKey, {
+        queryClient.setQueryData<CommentsData>(commentsKey, {
           ...previousComments,
-          data: {
-            ...previousComments.data,
-            comments: [
-              optimisticComment,
-              ...previousComments.data.comments,
-            ].slice(0, pagination.limit),
-            pagination: {
-              ...pagination,
-              total: nextTotal,
-              totalPages: Math.max(Math.ceil(nextTotal / pagination.limit), 1),
-            },
-          },
+          pages: previousComments.pages.map((page, index) =>
+            index === 0
+              ? {
+                  ...page,
+                  data: {
+                    ...page.data,
+                    comments: [optimisticComment, ...page.data.comments],
+                    pagination: {
+                      ...page.data.pagination,
+                      total: page.data.pagination.total + 1,
+                    },
+                  },
+                }
+              : page
+          ),
         });
+
+        listRef.current?.scrollTo({ top: 0 });
       }
 
-      return { firstPageKey, previousComments, commentText };
+      return { previousComments, commentText };
     },
 
     onError: (_error, _commentText, context) => {
       if (context?.previousComments) {
-        queryClient.setQueryData(
-          context.firstPageKey,
-          context.previousComments
-        );
+        queryClient.setQueryData(commentsKey, context.previousComments);
       }
 
       setText((currentText) => currentText || context?.commentText || '');
     },
 
-    onSuccess: () => {
-      setSuccessMessage('Komentar berhasil dikirim.');
-    },
-
     onSettled: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ['comments', postId],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ['posts'],
+        }),
+      ]);
+    },
+  });
+
+  const deleteCommentMutation = useMutation({
+    mutationFn: (commentId: number) => deleteComment(commentId),
+
+    onSuccess: async (_, deletedCommentId) => {
+      queryClient.setQueryData<CommentsData>(commentsKey, (current) =>
+        current
+          ? {
+              ...current,
+              pages: current.pages.map((page) => ({
+                ...page,
+                data: {
+                  ...page.data,
+                  comments: page.data.comments.filter(
+                    (comment) => comment.id !== deletedCommentId
+                  ),
+                  pagination: {
+                    ...page.data.pagination,
+                    total: Math.max(page.data.pagination.total - 1, 0),
+                  },
+                },
+              })),
+            }
+          : current
+      );
+
       await Promise.all([
         queryClient.invalidateQueries({
           queryKey: ['comments', postId],
@@ -199,9 +338,7 @@ export function PostComments({
 
     const trimmedText = text.trim();
 
-    setSuccessMessage(null);
-
-    if (!trimmedText) {
+    if (!trimmedText || addCommentMutation.isPending) {
       return;
     }
 
@@ -217,299 +354,249 @@ export function PostComments({
       'Hapus komentar ini? Tindakan ini tidak dapat dibatalkan.'
     );
 
-    if (!confirmed) {
+    if (confirmed) {
+      deleteCommentMutation.mutate(commentId);
+    }
+  }
+
+  function handleInsertEmoji(emoji: string) {
+    const input = inputRef.current;
+    const start = input?.selectionStart ?? text.length;
+    const end = input?.selectionEnd ?? start;
+    const nextText = text.slice(0, start) + emoji + text.slice(end);
+
+    if (nextText.length > COMMENT_MAX_LENGTH) {
       return;
     }
 
-    setSuccessMessage(null);
-    deleteCommentMutation.mutate(commentId);
-  }
+    setText(nextText);
 
-  const deleteCommentMutation = useMutation({
-    mutationFn: (commentId: number) => deleteComment(commentId),
-
-    onSuccess: async (_, deletedCommentId) => {
-      const currentPageCommentCount =
-        commentsQuery.data?.data.comments.length ?? 0;
-
-      queryClient.setQueriesData<CommentsResponse>(
-        {
-          queryKey: ['comments', postId],
-        },
-        (currentResponse) => {
-          if (!currentResponse) {
-            return currentResponse;
-          }
-
-          const nextTotal = Math.max(
-            currentResponse.data.pagination.total - 1,
-            0
-          );
-
-          const nextTotalPages = Math.max(
-            Math.ceil(nextTotal / currentResponse.data.pagination.limit),
-            1
-          );
-
-          return {
-            ...currentResponse,
-            data: {
-              ...currentResponse.data,
-              comments: currentResponse.data.comments.filter(
-                (comment) => comment.id !== deletedCommentId
-              ),
-              pagination: {
-                ...currentResponse.data.pagination,
-                total: nextTotal,
-                totalPages: nextTotalPages,
-              },
-            },
-          };
-        }
-      );
-
-      setSuccessMessage('Komentar berhasil dihapus.');
-
-      if (currentPageCommentCount === 1 && page > 1) {
-        setPage((currentPage) => Math.max(currentPage - 1, 1));
-      }
-
-      await Promise.all([
-        queryClient.invalidateQueries({
-          queryKey: ['comments', postId],
-        }),
-        queryClient.invalidateQueries({
-          queryKey: ['posts'],
-        }),
-      ]);
-    },
-  });
-
-  const comments = commentsQuery.data?.data.comments ?? [];
-
-  const pagination = commentsQuery.data?.data.pagination;
-
-  const totalPages = Math.max(pagination?.totalPages ?? 1, 1);
-
-  if (hideToggle && !isOpen) {
-    return null;
+    window.requestAnimationFrame(() => {
+      input?.focus();
+      input?.setSelectionRange(start + emoji.length, start + emoji.length);
+    });
   }
 
   return (
-    <div className='mt-4 border-t pt-4'>
-      {hideToggle ? null : (
-        <Button
-          type='button'
-          variant='outline'
-          aria-expanded={isOpen}
-          aria-controls={`comments-${postId}`}
-          onClick={() => setIsOpen(!isOpen)}
-        >
-          {isOpen
-            ? 'Sembunyikan komentar'
-            : commentCount > 0
-              ? `Lihat ${commentCount} komentar`
-              : 'Tulis komentar'}
-        </Button>
-      )}
+    <>
+      <div ref={listRef} className='-mr-2 min-h-0 flex-1 overflow-y-auto pr-2'>
+        {commentsQuery.isPending && open ? (
+          <div
+            role='status'
+            aria-label='Memuat komentar'
+            className='space-y-4'
+          >
+            {[0, 1, 2].map((item) => (
+              <div key={item} className='flex gap-3'>
+                <Skeleton className='size-9 rounded-full' />
+                <div className='flex-1 space-y-2'>
+                  <Skeleton className='h-4 w-28' />
+                  <Skeleton className='h-4 w-full' />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : null}
 
-      {isOpen ? (
-        <div id={`comments-${postId}`} className='mt-4 space-y-4'>
-          {commentsQuery.isPending ? (
-            <p role='status' className='text-sm text-muted-foreground'>
-              Memuat komentar...
+        {commentsQuery.isError && !commentsQuery.data ? (
+          <div
+            role='alert'
+            className='rounded-xl border border-destructive/40 bg-destructive/10 p-4'
+          >
+            <p className='text-sm text-destructive'>
+              {getApiErrorMessage(commentsQuery.error)}
             </p>
-          ) : null}
 
-          {commentsQuery.isError ? (
-            <div
-              role='alert'
-              className='rounded-xl border border-destructive/40 bg-destructive/10 p-4'
+            <Button
+              type='button'
+              variant='outline'
+              className='mt-3'
+              onClick={() => commentsQuery.refetch()}
             >
-              <p className='text-sm text-destructive'>
-                {getApiErrorMessage(commentsQuery.error)}
-              </p>
+              Coba lagi
+            </Button>
+          </div>
+        ) : null}
 
-              <Button
-                type='button'
-                variant='outline'
-                className='mt-3'
-                onClick={() => commentsQuery.refetch()}
-              >
-                Coba lagi
-              </Button>
-            </div>
-          ) : null}
+        {commentsQuery.isSuccess && comments.length === 0 ? (
+          <div className='flex h-full flex-col items-center justify-center py-10 text-center'>
+            <p className='font-semibold'>Belum ada komentar</p>
+            <p className='mt-1 text-sm text-muted-foreground'>
+              Mulai percakapan.
+            </p>
+          </div>
+        ) : null}
 
-          {commentsQuery.isSuccess ? (
-            comments.length > 0 ? (
-              <ul className='space-y-4'>
-                {comments.map((comment) => {
-                  const createdAt = dayjs(comment.createdAt);
+        {comments.length > 0 ? (
+          <ul className='space-y-5'>
+            {comments.map((comment) => {
+              const createdAt = dayjs(comment.createdAt);
+              const isDeleting =
+                deleteCommentMutation.isPending &&
+                deleteCommentMutation.variables === comment.id;
 
-                  const createdLabel = createdAt.isValid()
-                    ? createdAt.locale('id').format('D MMM YYYY, HH.mm')
-                    : 'Waktu tidak tersedia';
+              return (
+                <li key={comment.id} className='flex gap-3'>
+                  <div className='flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted text-sm font-semibold'>
+                    <SafeImage
+                      src={comment.author.avatarUrl}
+                      alt={`Avatar ${comment.author.name}`}
+                      className='size-full object-cover'
+                      fallback={<span>{getInitials(comment.author.name)}</span>}
+                    />
+                  </div>
 
-                  return (
-                    <li key={comment.id} className='flex gap-3'>
-                      <div className='flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted text-sm font-semibold'>
-                        <SafeImage
-                          src={comment.author.avatarUrl}
-                          alt={`Avatar ${comment.author.name}`}
-                          className='size-full object-cover'
-                          fallback={
-                            <span>{getInitials(comment.author.name)}</span>
-                          }
-                        />
-                      </div>
-
-                      <div className='min-w-0 flex-1 rounded-xl bg-muted/50 px-4 py-3'>
-                        <div className='flex flex-wrap items-start justify-between gap-3'>
-                          <div className='min-w-0'>
-                            <p className='font-semibold'>
-                              {comment.author.name}
-                            </p>
-                            <p className='text-sm text-muted-foreground'>
-                              @{comment.author.username}
-                            </p>
-                          </div>
-
-                          <div className='flex items-center gap-2'>
-                            <time className='text-xs text-muted-foreground'>
-                              {createdLabel}
-                            </time>
-
-                            {canDeleteComment(comment) ? (
-                              <Button
-                                type='button'
-                                variant='ghost'
-                                className='h-auto px-2 py-1 text-xs text-destructive hover:text-destructive'
-                                disabled={
-                                  deleteCommentMutation.isPending &&
-                                  deleteCommentMutation.variables === comment.id
-                                }
-                                onClick={() => handleDeleteComment(comment.id)}
-                              >
-                                {deleteCommentMutation.isPending &&
-                                deleteCommentMutation.variables === comment.id
-                                  ? 'Menghapus...'
-                                  : 'Hapus'}
-                              </Button>
-                            ) : null}
-                          </div>
-                        </div>
-
-                        <p className='mt-2 whitespace-pre-wrap break-words text-sm leading-6'>
-                          {comment.text}
+                  <div className='min-w-0 flex-1'>
+                    <div className='flex items-start justify-between gap-3'>
+                      <div className='min-w-0'>
+                        <p className='truncate text-sm font-semibold'>
+                          {comment.author.name}
                         </p>
+                        <time
+                          dateTime={comment.createdAt}
+                          className='block text-xs text-muted-foreground'
+                        >
+                          {createdAt.isValid()
+                            ? createdAt.locale('id').fromNow()
+                            : 'Waktu tidak tersedia'}
+                        </time>
                       </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            ) : (
-              <p className='text-sm text-muted-foreground'>
-                Belum ada komentar. Jadilah yang pertama.
-              </p>
-            )
-          ) : null}
 
-          {deleteCommentMutation.isError ? (
-            <p role='alert' className='text-sm text-destructive'>
-              {getApiErrorMessage(deleteCommentMutation.error)}
-            </p>
-          ) : null}
+                      {canDeleteComment(comment) ? (
+                        <Button
+                          type='button'
+                          variant='ghost'
+                          className='h-auto shrink-0 px-2 py-1 text-xs text-destructive hover:text-destructive'
+                          disabled={isDeleting}
+                          onClick={() => handleDeleteComment(comment.id)}
+                        >
+                          {isDeleting ? 'Menghapus...' : 'Hapus'}
+                        </Button>
+                      ) : null}
+                    </div>
 
-          {commentsQuery.isSuccess && totalPages > 1 ? (
-            <nav
-              aria-label={`Halaman komentar postingan ${postId}`}
-              className='flex items-center justify-between gap-3'
+                    <p className='mt-1 whitespace-pre-wrap break-words text-sm leading-6'>
+                      {comment.text}
+                    </p>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        ) : null}
+
+        {deleteCommentMutation.isError ? (
+          <p role='alert' className='mt-4 text-sm text-destructive'>
+            {getApiErrorMessage(deleteCommentMutation.error)}
+          </p>
+        ) : null}
+
+        {commentsQuery.isFetchNextPageError ? (
+          <p role='alert' className='mt-4 text-center text-sm text-destructive'>
+            {getApiErrorMessage(commentsQuery.error)}
+          </p>
+        ) : null}
+
+        {commentsQuery.hasNextPage ? (
+          <div className='mt-4 flex justify-center'>
+            <Button
+              type='button'
+              variant='outline'
+              className='rounded-full'
+              disabled={commentsQuery.isFetchingNextPage}
+              onClick={() => void commentsQuery.fetchNextPage()}
             >
-              <Button
+              {commentsQuery.isFetchingNextPage
+                ? 'Memuat...'
+                : 'Muat komentar lainnya'}
+            </Button>
+          </div>
+        ) : null}
+      </div>
+
+      <div className='border-t border-border pt-3'>
+        {isGuest ? (
+          <p className='text-sm text-muted-foreground'>
+            <Link
+              href={`/login?next=${encodeURIComponent(pathname)}`}
+              className='font-medium text-brand-200 hover:underline'
+            >
+              Masuk
+            </Link>{' '}
+            untuk menambahkan komentar.
+          </p>
+        ) : (
+          <form onSubmit={handleSubmit}>
+            {emojiOpen ? (
+              <div
+                role='group'
+                aria-label='Pilih emoji'
+                className='mb-3 grid grid-cols-6 gap-1 rounded-xl bg-muted/40 p-2'
+              >
+                {EMOJIS.map((emoji) => (
+                  <button
+                    key={emoji}
+                    type='button'
+                    aria-label={`Sisipkan emoji ${emoji}`}
+                    className='flex size-9 items-center justify-center rounded-lg text-xl transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40'
+                    onClick={() => handleInsertEmoji(emoji)}
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+
+            <div className='flex items-center gap-2'>
+              <button
                 type='button'
-                variant='outline'
-                disabled={page <= 1 || commentsQuery.isFetching}
-                onClick={() => setPage((current) => Math.max(current - 1, 1))}
+                aria-label='Pilih emoji'
+                aria-expanded={emojiOpen}
+                className='flex size-10 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40'
+                onClick={() => setEmojiOpen((current) => !current)}
               >
-                Sebelumnya
-              </Button>
+                <SmilePlus className='size-5' aria-hidden='true' />
+              </button>
 
-              <p className='text-xs text-muted-foreground'>
-                Halaman {pagination?.page ?? page} dari {totalPages}
-              </p>
-
-              <Button
-                type='button'
-                variant='outline'
-                disabled={page >= totalPages || commentsQuery.isFetching}
-                onClick={() => setPage((current) => current + 1)}
-              >
-                Berikutnya
-              </Button>
-            </nav>
-          ) : null}
-
-          {isGuest ? (
-            <p className='border-t pt-4 text-sm text-muted-foreground'>
-              <Link
-                href={`/login?next=${encodeURIComponent(pathname)}`}
-                className='font-medium text-violet-500 hover:underline'
-              >
-                Masuk
-              </Link>{' '}
-              untuk menambahkan komentar.
-            </p>
-          ) : (
-            <form className='space-y-2 border-t pt-4' onSubmit={handleSubmit}>
-              <label htmlFor={`comment-${postId}`} className='font-medium'>
+              <label htmlFor={`comment-${postId}`} className='sr-only'>
                 Tambahkan komentar
               </label>
-
-              <textarea
+              <input
+                ref={inputRef}
                 id={`comment-${postId}`}
-                rows={3}
+                type='text'
                 maxLength={COMMENT_MAX_LENGTH}
                 value={text}
-                placeholder='Tulis komentarmu...'
-                className='w-full resize-y rounded-xl border bg-background px-4 py-3 text-sm outline-none transition focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20'
-                onChange={(event) => {
-                  setText(event.target.value);
-                  setSuccessMessage(null);
-                }}
+                placeholder='Tambahkan komentar'
+                autoComplete='off'
+                className='h-10 min-w-0 flex-1 rounded-full border border-input bg-muted/40 px-4 text-sm outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30'
+                onChange={(event) => setText(event.target.value)}
               />
 
-              <div className='flex flex-wrap items-center justify-between gap-3'>
-                <span className='text-xs text-muted-foreground'>
-                  {text.length}/{COMMENT_MAX_LENGTH}
-                </span>
+              <Button
+                type='submit'
+                variant='ghost'
+                className='h-10 rounded-full px-3 font-semibold text-brand-200 hover:text-brand-200'
+                disabled={!text.trim() || addCommentMutation.isPending}
+              >
+                Kirim
+              </Button>
+            </div>
 
-                <Button
-                  type='submit'
-                  disabled={!text.trim() || addCommentMutation.isPending}
-                >
-                  Kirim komentar
-                </Button>
-              </div>
+            {text.length >= COMMENT_MAX_LENGTH - 30 ? (
+              <p className='mt-1 text-right text-xs text-muted-foreground'>
+                {text.length}/{COMMENT_MAX_LENGTH}
+              </p>
+            ) : null}
 
-              {addCommentMutation.isError ? (
-                <p role='alert' className='text-sm text-destructive'>
-                  {getApiErrorMessage(addCommentMutation.error)}
-                </p>
-              ) : null}
-
-              {successMessage ? (
-                <p
-                  role='status'
-                  className='text-sm text-emerald-600 dark:text-emerald-400'
-                >
-                  {successMessage}
-                </p>
-              ) : null}
-            </form>
-          )}
-        </div>
-      ) : null}
-    </div>
+            {addCommentMutation.isError ? (
+              <p role='alert' className='mt-2 text-sm text-destructive'>
+                {getApiErrorMessage(addCommentMutation.error)}
+              </p>
+            ) : null}
+          </form>
+        )}
+      </div>
+    </>
   );
 }
