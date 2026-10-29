@@ -22,7 +22,8 @@ import type { ApiPost, PostsResponse } from '@/types/feed';
 type ApiPostCardProps = {
   post: ApiPost;
   showDetailLink?: boolean;
-  detailSource?: 'liked' | 'profile';
+  detailSource?: 'liked' | 'profile' | 'public-profile';
+  detailReturnHref?: string;
 };
 
 function getInitials(name: string) {
@@ -41,6 +42,7 @@ export function ApiPostCard({
   post,
   showDetailLink = true,
   detailSource,
+  detailReturnHref,
 }: ApiPostCardProps) {
   const queryClient = useQueryClient();
 
@@ -254,7 +256,11 @@ export function ApiPostCard({
                 ? `/posts/${post.id}?from=liked`
                 : detailSource === 'profile'
                   ? `/posts/${post.id}?from=profile`
-                  : `/posts/${post.id}`
+                  : detailSource === 'public-profile' && detailReturnHref
+                    ? `/posts/${post.id}?from=public-profile&returnTo=${encodeURIComponent(
+                        detailReturnHref
+                      )}`
+                    : `/posts/${post.id}`
             }
             prefetch={false}
             className='mt-3 inline-flex text-sm font-medium text-violet-500 transition hover:text-violet-400'

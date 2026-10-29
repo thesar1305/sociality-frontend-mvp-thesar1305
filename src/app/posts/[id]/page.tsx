@@ -16,6 +16,7 @@ type PostPageProps = {
   }>;
   searchParams: Promise<{
     from?: string;
+    returnTo?: string;
   }>;
 };
 
@@ -23,8 +24,26 @@ export default async function PostPage({
   params,
   searchParams,
 }: PostPageProps) {
-  const [{ id }, { from }] = await Promise.all([params, searchParams]);
+  const [{ id }, { from, returnTo }] = await Promise.all([
+    params,
+    searchParams,
+  ]);
   const postId = Number(id);
+
+  if (!Number.isInteger(postId) || postId <= 0) {
+    notFound();
+  }
+
+  const publicProfileReturnHref =
+    from === 'public-profile' &&
+    typeof returnTo === 'string' &&
+    returnTo.startsWith('/users/') &&
+    !returnTo.startsWith('//') &&
+    !returnTo.includes('\\') &&
+    !/[\r\n]/.test(returnTo)
+      ? returnTo
+      : null;
+
   const backHref =
     from === 'saved'
       ? '/me/saved'
@@ -32,7 +51,7 @@ export default async function PostPage({
         ? '/me/likes'
         : from === 'profile'
           ? '/me'
-          : '/feed';
+          : (publicProfileReturnHref ?? '/feed');
 
   const backLabel =
     from === 'saved'
@@ -41,11 +60,9 @@ export default async function PostPage({
         ? 'Kembali ke postingan disukai'
         : from === 'profile'
           ? 'Kembali ke profil'
-          : 'Kembali ke feed';
-
-  if (!Number.isInteger(postId) || postId <= 0) {
-    notFound();
-  }
+          : publicProfileReturnHref
+            ? 'Kembali ke profil pengguna'
+            : 'Kembali ke feed';
 
   return (
     <ProtectedRoute>

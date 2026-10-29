@@ -11,6 +11,7 @@ import { getApiErrorMessage } from '@/lib/api/client';
 import {
   followUser,
   getPublicProfile,
+  getUserLikes,
   getUserPosts,
   unfollowUser,
 } from '@/lib/api/users';
@@ -33,13 +34,18 @@ type PublicUserProfileProps = {
   username: string;
   backHref?: string;
   backLabel?: string;
+  initialTab?: 'posts' | 'likes';
+  profileReturnHref: string;
 };
 
 export function PublicUserProfile({
   username,
   backHref = '/search',
   backLabel = 'Kembali ke pencarian',
+  initialTab = 'posts',
+  profileReturnHref,
 }: PublicUserProfileProps) {
+  const [activeTab, setActiveTab] = useState<'posts' | 'likes'>(initialTab);
   const [page, setPage] = useState(1);
   const queryClient = useQueryClient();
 
@@ -58,7 +64,22 @@ export function PublicUserProfile({
         page,
         limit: POSTS_PER_PAGE,
       }),
+    enabled: activeTab === 'posts',
   });
+
+  const likedPostsQuery = useQuery({
+    queryKey: ['posts', 'user-liked', username, page, POSTS_PER_PAGE],
+    queryFn: () =>
+      getUserLikes({
+        username,
+        page,
+        limit: POSTS_PER_PAGE,
+      }),
+    enabled: activeTab === 'likes',
+  });
+
+  const activePostsQuery = activeTab === 'posts' ? postsQuery : likedPostsQuery;
+
   const followMutation = useMutation({
     mutationFn: ({ shouldFollow }: { shouldFollow: boolean }) =>
       shouldFollow ? followUser(username) : unfollowUser(username),
@@ -129,7 +150,7 @@ export function PublicUserProfile({
     },
   });
 
-  if (profileQuery.isPending || postsQuery.isPending) {
+  if (profileQuery.isPending || activePostsQuery.isPending) {
     return (
       <div
         role='status'
@@ -140,8 +161,8 @@ export function PublicUserProfile({
     );
   }
 
-  if (profileQuery.isError || postsQuery.isError) {
-    const error = profileQuery.error ?? postsQuery.error;
+  if (profileQuery.isError || activePostsQuery.isError) {
+    const error = profileQuery.error ?? activePostsQuery.error;
 
     return (
       <div
@@ -155,7 +176,10 @@ export function PublicUserProfile({
           variant='outline'
           className='mt-4'
           onClick={() => {
-            void Promise.all([profileQuery.refetch(), postsQuery.refetch()]);
+            void Promise.all([
+              profileQuery.refetch(),
+              activePostsQuery.refetch(),
+            ]);
           }}
         >
           Coba lagi
@@ -164,9 +188,29 @@ export function PublicUserProfile({
     );
   }
 
+  if (!profileQuery.data || !activePostsQuery.data) {
+    return null;
+  }
+
   const profile = profileQuery.data.data;
-  const { posts, pagination } = postsQuery.data.data;
+  const { posts, pagination } = activePostsQuery.data.data;
   const totalPages = Math.max(pagination.totalPages, 1);
+
+  const [profilePath, profileQueryString = ''] = profileReturnHref.split('?');
+
+  const currentProfileSearchParams = new URLSearchParams(profileQueryString);
+
+  if (activeTab === 'likes') {
+    currentProfileSearchParams.set('tab', 'likes');
+  } else {
+    currentProfileSearchParams.delete('tab');
+  }
+
+  const currentProfileQuery = currentProfileSearchParams.toString();
+
+  const currentProfileReturnHref = currentProfileQuery
+    ? `${profilePath}?${currentProfileQuery}`
+    : profilePath;
 
   return (
     <section aria-labelledby='public-profile-heading' className='space-y-6'>
@@ -272,7 +316,28 @@ export function PublicUserProfile({
 
             <div className='p-3'>
               <dt className='text-sm text-muted-foreground'>Disukai</dt>
-              <dd className='mt-1 font-bold'>{profile.counts.likes}</dd>
+              <dd className='mt-1 font-bold'>
+                <button
+                  type='button'
+                  className='rounded text-violet-500 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500'
+                  aria-label={`Lihat ${profile.counts.likes} postingan yang disukai`}
+                  onClick={() => {
+                    setActiveTab('likes');
+                    setPage(1);
+
+                    window.requestAnimationFrame(() => {
+                      document
+                        .getElementById('public-profile-content')
+                        ?.scrollIntoView({
+                          behavior: 'smooth',
+                          block: 'start',
+                        });
+                    });
+                  }}
+                >
+                  {profile.counts.likes}
+                </button>
+              </dd>
             </div>
           </dl>
         </div>
@@ -287,34 +352,82 @@ export function PublicUserProfile({
         </p>
       ) : null}
 
-      <div>
-        <h2 className='text-2xl font-bold'>Postingan</h2>
+      <div id='public-profile-content' className='scroll-mt-24'>
+        <div
+          role='tablist'
+          aria-label='Konten profil pengguna'
+          className='mb-5 flex gap-2 border-b pb-3'
+        >
+          <Button
+            type='button'
+            role='tab'
+            aria-selected={activeTab === 'posts'}
+            variant={activeTab === 'posts' ? 'default' : 'outline'}
+            onClick={() => {
+              setActiveTab('posts');
+              setPage(1);
+            }}
+          >
+            Postingan
+          </Button>
+
+          <Button
+            type='button'
+            role='tab'
+            aria-selected={activeTab === 'likes'}
+            variant={activeTab === 'likes' ? 'default' : 'outline'}
+            onClick={() => {
+              setActiveTab('likes');
+              setPage(1);
+            }}
+          >
+            Disukai
+          </Button>
+        </div>
+
+        <h2 className='text-2xl font-bold'>
+          {activeTab === 'posts' ? 'Postingan' : 'Postingan disukai'}
+        </h2>
+
         <p className='mt-1 text-sm text-muted-foreground'>
-          Postingan terbaru dari @{profile.username}.
+          {activeTab === 'posts'
+            ? `Postingan terbaru dari @${profile.username}.`
+            : `Postingan yang disukai oleh @${profile.username}.`}
         </p>
       </div>
 
       {posts.length > 0 ? (
         <div className='space-y-5'>
           {posts.map((post) => (
-            <ApiPostCard key={post.id} post={post} />
+            <ApiPostCard
+              key={post.id}
+              post={post}
+              detailSource='public-profile'
+              detailReturnHref={currentProfileReturnHref}
+            />
           ))}
         </div>
       ) : (
         <div className='rounded-2xl border bg-card p-8 text-center text-muted-foreground'>
-          Pengguna ini belum membuat postingan.
+          {activeTab === 'posts'
+            ? 'Pengguna ini belum membuat postingan.'
+            : 'Pengguna ini belum menyukai postingan.'}
         </div>
       )}
 
       {posts.length > 0 ? (
         <nav
-          aria-label='Navigasi postingan pengguna'
+          aria-label={
+            activeTab === 'posts'
+              ? 'Navigasi postingan pengguna'
+              : 'Navigasi postingan yang disukai pengguna'
+          }
           className='flex items-center justify-between gap-4 rounded-2xl border bg-card p-4'
         >
           <Button
             type='button'
             variant='outline'
-            disabled={page <= 1 || postsQuery.isFetching}
+            disabled={page <= 1 || activePostsQuery.isFetching}
             onClick={() =>
               setPage((currentPage) => Math.max(currentPage - 1, 1))
             }
@@ -329,7 +442,7 @@ export function PublicUserProfile({
           <Button
             type='button'
             variant='outline'
-            disabled={page >= totalPages || postsQuery.isFetching}
+            disabled={page >= totalPages || activePostsQuery.isFetching}
             onClick={() => setPage((currentPage) => currentPage + 1)}
           >
             Berikutnya

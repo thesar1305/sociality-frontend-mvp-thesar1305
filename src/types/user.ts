@@ -34,6 +34,8 @@ export type UserPostsResponse = {
   };
 };
 
+export type UserLikesResponse = UserPostsResponse;
+
 export type UserSearchItem = {
   id: number;
   username: string;

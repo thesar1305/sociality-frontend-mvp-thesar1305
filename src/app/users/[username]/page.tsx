@@ -17,6 +17,7 @@ type UserProfilePageProps = {
   searchParams: Promise<{
     from?: string;
     postId?: string;
+    tab?: string;
   }>;
 };
 
@@ -24,7 +25,7 @@ export default async function UserProfilePage({
   params,
   searchParams,
 }: UserProfilePageProps) {
-  const [{ username }, { from, postId }] = await Promise.all([
+  const [{ username }, { from, postId, tab }] = await Promise.all([
     params,
     searchParams,
   ]);
@@ -47,7 +48,24 @@ export default async function UserProfilePage({
   if (!normalizedUsername) {
     notFound();
   }
+  const initialTab = tab === 'likes' ? 'likes' : 'posts';
 
+  const profileSearchParams = new URLSearchParams();
+
+  if (cameFromPostLikers) {
+    profileSearchParams.set('from', 'post-likers');
+    profileSearchParams.set('postId', String(numericPostId));
+  }
+
+  if (initialTab === 'likes') {
+    profileSearchParams.set('tab', 'likes');
+  }
+
+  const profileQuery = profileSearchParams.toString();
+
+  const profileReturnHref = profileQuery
+    ? `/users/${encodeURIComponent(normalizedUsername)}?${profileQuery}`
+    : `/users/${encodeURIComponent(normalizedUsername)}`;
   return (
     <ProtectedRoute>
       <AppShell>
@@ -55,6 +73,8 @@ export default async function UserProfilePage({
           username={normalizedUsername}
           backHref={backHref}
           backLabel={backLabel}
+          initialTab={initialTab}
+          profileReturnHref={profileReturnHref}
         />
       </AppShell>
     </ProtectedRoute>

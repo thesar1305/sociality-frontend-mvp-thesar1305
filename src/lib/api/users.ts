@@ -5,6 +5,7 @@ import type {
   UserSearchResponse,
   UserConnectionKind,
   UserConnectionsResponse,
+  UserLikesResponse,
 } from '@/types/user';
 
 type GetUserPostsOptions = {
@@ -52,6 +53,24 @@ export async function getUserPosts({
 }: GetUserPostsOptions) {
   const response = await apiClient.get<UserPostsResponse>(
     `/api/users/${encodeURIComponent(username)}/posts`,
+    {
+      params: {
+        page,
+        limit,
+      },
+    }
+  );
+
+  return response.data;
+}
+
+export async function getUserLikes({
+  username,
+  page = 1,
+  limit = 10,
+}: GetUserPostsOptions) {
+  const response = await apiClient.get<UserLikesResponse>(
+    `/api/users/${encodeURIComponent(username)}/likes`,
     {
       params: {
         page,
