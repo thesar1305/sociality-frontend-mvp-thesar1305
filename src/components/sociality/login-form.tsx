@@ -2,12 +2,20 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation } from '@tanstack/react-query';
+import axios from 'axios';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 
+import {
+  AuthAlert,
+  AuthField,
+  AuthShell,
+} from '@/components/sociality/auth-shell';
+import { PasswordInput } from '@/components/sociality/password-input';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { loginUser } from '@/lib/api/auth';
 import { getApiErrorMessage } from '@/lib/api/client';
 import { saveAccessToken } from '@/lib/auth/storage';
@@ -15,9 +23,6 @@ import { saveAccessToken } from '@/lib/auth/storage';
 import { useAppSelector } from '@/lib/store/hooks';
 import { loginSchema, type LoginFormValues } from '@/lib/validation/auth';
 import { extractAccessToken } from '@/types/auth';
-
-const inputClassName =
-  'h-11 w-full rounded-xl border border-zinc-700 bg-zinc-900 px-3 text-sm text-white outline-none transition placeholder:text-zinc-500 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20';
 
 type LoginFormProps = {
   registrationSuccess?: boolean;
@@ -56,6 +61,11 @@ export function LoginForm({
       window.location.replace(redirectTo);
     },
     onError: (error) => {
+      if (axios.isAxiosError(error) && error.response?.status === 401) {
+        setFormError('Email atau kata sandi salah.');
+        return;
+      }
+
       setFormError(getApiErrorMessage(error));
     },
   });
@@ -72,87 +82,64 @@ export function LoginForm({
   });
 
   return (
-    <form className='space-y-5' onSubmit={onSubmit} noValidate>
-      {registrationSuccess ? (
-        <p
-          role='status'
-          className='rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-300'
-        >
-          Akun berhasil dibuat. Silakan masuk.
-        </p>
-      ) : null}
-      {formError ? (
-        <p
-          role='alert'
-          className='rounded-xl border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-300'
-        >
-          {formError}
-        </p>
-      ) : null}
-
-      <div className='space-y-2'>
-        <label htmlFor='email' className='text-sm font-medium text-zinc-200'>
-          Email
-        </label>
-
-        <input
-          id='email'
-          type='email'
-          autoComplete='email'
-          placeholder='nama@email.com'
-          aria-invalid={Boolean(errors.email)}
-          aria-describedby={errors.email ? 'email-error' : undefined}
-          className={inputClassName}
-          {...register('email')}
-        />
-
-        {errors.email ? (
-          <p id='email-error' className='text-sm text-red-400'>
-            {errors.email.message}
-          </p>
+    <AuthShell
+      title='Selamat Datang Kembali!'
+      description='Masuk untuk melihat cerita terbaru.'
+      footer={
+        <>
+          Belum memiliki akun?{' '}
+          <Link
+            href='/register'
+            className='font-semibold text-primary hover:underline'
+          >
+            Daftar
+          </Link>
+        </>
+      }
+    >
+      <form className='space-y-4' onSubmit={onSubmit} noValidate>
+        {registrationSuccess ? (
+          <AuthAlert variant='success'>
+            Akun berhasil dibuat. Silakan masuk.
+          </AuthAlert>
         ) : null}
-      </div>
+        {formError ? <AuthAlert variant='error'>{formError}</AuthAlert> : null}
 
-      <div className='space-y-2'>
-        <label htmlFor='password' className='text-sm font-medium text-zinc-200'>
-          Kata sandi
-        </label>
+        <AuthField id='email' label='Email' error={errors.email?.message}>
+          <Input
+            id='email'
+            type='email'
+            autoComplete='email'
+            placeholder='Masukkan email'
+            aria-invalid={Boolean(errors.email)}
+            aria-describedby={errors.email ? 'email-error' : undefined}
+            {...register('email')}
+          />
+        </AuthField>
 
-        <input
+        <AuthField
           id='password'
-          type='password'
-          autoComplete='current-password'
-          placeholder='Minimal 6 karakter'
-          aria-invalid={Boolean(errors.password)}
-          aria-describedby={errors.password ? 'password-error' : undefined}
-          className={inputClassName}
-          {...register('password')}
-        />
-
-        {errors.password ? (
-          <p id='password-error' className='text-sm text-red-400'>
-            {errors.password.message}
-          </p>
-        ) : null}
-      </div>
-
-      <Button
-        type='submit'
-        disabled={loginMutation.isPending}
-        className='h-11 w-full rounded-xl bg-violet-600 text-white hover:bg-violet-500'
-      >
-        {loginMutation.isPending ? 'Memproses...' : 'Masuk'}
-      </Button>
-
-      <p className='text-center text-sm text-zinc-400'>
-        Belum memiliki akun?{' '}
-        <Link
-          href='/register'
-          className='font-semibold text-violet-400 hover:text-violet-300'
+          label='Kata sandi'
+          error={errors.password?.message}
         >
-          Daftar
-        </Link>
-      </p>
-    </form>
+          <PasswordInput
+            id='password'
+            autoComplete='current-password'
+            placeholder='Masukkan kata sandi'
+            aria-invalid={Boolean(errors.password)}
+            aria-describedby={errors.password ? 'password-error' : undefined}
+            {...register('password')}
+          />
+        </AuthField>
+
+        <Button
+          type='submit'
+          disabled={loginMutation.isPending}
+          className='h-11 w-full rounded-full text-base font-semibold'
+        >
+          {loginMutation.isPending ? 'Memproses...' : 'Masuk'}
+        </Button>
+      </form>
+    </AuthShell>
   );
 }

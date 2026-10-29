@@ -23,7 +23,19 @@ apiClient.interceptors.request.use((config) => {
 
 export function getApiErrorMessage(error: unknown) {
   if (axios.isAxiosError<ApiErrorResponse>(error)) {
-    const message = error.response?.data?.message;
+    const body = error.response?.data;
+
+    if (Array.isArray(body?.data)) {
+      const details = body.data
+        .map((item) => item?.msg)
+        .filter((msg): msg is string => typeof msg === 'string' && msg !== '');
+
+      if (details.length > 0) {
+        return details.join(', ');
+      }
+    }
+
+    const message = body?.message;
 
     if (Array.isArray(message)) {
       return message.join(', ');
