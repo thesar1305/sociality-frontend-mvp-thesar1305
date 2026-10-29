@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { getMyProfile } from '@/lib/api/profile';
+import { avatarThumb } from '@/lib/images';
 import { removeAccessToken } from '@/lib/auth/storage';
 import { clearSession } from '@/lib/store/auth-slice';
 import { useHydrated } from '@/lib/hooks/use-hydrated';
@@ -83,7 +84,7 @@ export function AuthNavigation() {
       >
         <Avatar className='size-9'>
           {profile?.avatarUrl ? (
-            <AvatarImage src={profile.avatarUrl} alt='' />
+            <AvatarImage src={avatarThumb(profile.avatarUrl, 72)} alt='' />
           ) : null}
           <AvatarFallback>{getInitial(profile?.name)}</AvatarFallback>
         </Avatar>

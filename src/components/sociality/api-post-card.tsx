@@ -22,6 +22,7 @@ import {
   unlikePost,
   unsavePost,
 } from '@/lib/api/posts';
+import { track } from '@/lib/analytics';
 import { useAppSelector } from '@/lib/store/hooks';
 import type { ApiPost, PostsResponse } from '@/types/feed';
 import { cn } from 'cn';
@@ -38,6 +39,8 @@ type ApiPostCardProps = {
   showDetailLink?: boolean;
   detailSource?: 'liked' | 'profile' | 'public-profile';
   detailReturnHref?: string;
+  /** Gambar di atas lipatan (post pertama) dimuat segera. */
+  priority?: boolean;
 };
 
 function getInitials(name: string) {
@@ -57,6 +60,7 @@ export function ApiPostCard({
   showDetailLink = true,
   detailSource,
   detailReturnHref,
+  priority = false,
 }: ApiPostCardProps) {
   const queryClient = useQueryClient();
   const [loginPromptOpen, setLoginPromptOpen] = useState(false);
@@ -121,6 +125,8 @@ export function ApiPostCard({
     },
 
     onSuccess: (_, nextLiked) => {
+      track(nextLiked ? 'post_like' : 'post_unlike', { postId: post.id });
+
       if (!nextLiked) {
         queryClient.setQueriesData<PostsResponse>(
           {
@@ -175,6 +181,10 @@ export function ApiPostCard({
 
     onError: () => {
       setOptimisticSaved(null);
+    },
+
+    onSuccess: (_, nextSaved) => {
+      track(nextSaved ? 'post_save' : 'post_unsave', { postId: post.id });
     },
 
     onSettled: async () => {
@@ -257,7 +267,9 @@ export function ApiPostCard({
           ? `Postingan ${post.author.name}: ${post.caption}`
           : `Postingan ${post.author.name}`
       }
-      className='aspect-square w-full rounded-xl bg-muted object-cover'
+      className='aspect-square w-full rounded-xl bg-muted'
+      sizes='(min-width: 672px) 640px, 100vw'
+      priority={priority}
       fallback={
         <div
           role='img'
@@ -281,7 +293,8 @@ export function ApiPostCard({
           <SafeImage
             src={post.author.avatarUrl}
             alt={`Avatar ${post.author.name}`}
-            className='size-full object-cover'
+            className='size-full'
+            sizes='44px'
             fallback={<span>{getInitials(post.author.name)}</span>}
           />
         </Link>

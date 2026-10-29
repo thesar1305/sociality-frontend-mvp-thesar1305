@@ -12,6 +12,7 @@ import dayjs from 'dayjs';
 import 'dayjs/locale/id';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { SmilePlus } from 'lucide-react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -23,6 +24,9 @@ import {
 } from 'react';
 
 import { Button } from '@/components/ui/button';
+import { track } from '@/lib/analytics';
+import { isOptimizableImage } from '@/lib/images';
+import { cn } from 'cn';
 import {
   Dialog,
   DialogContent,
@@ -93,11 +97,22 @@ function getInitials(name: string) {
 type SafeImageProps = {
   src: string | null | undefined;
   alt: string;
+  /** Diterapkan pada pembungkus (ukuran, rasio, radius, latar). */
   className?: string;
   fallback: ReactNode;
+  /** Lebar tampil sebenarnya, agar Next memilih ukuran gambar yang tepat. */
+  sizes?: string;
+  priority?: boolean;
 };
 
-export function SafeImage({ src, alt, className, fallback }: SafeImageProps) {
+export function SafeImage({
+  src,
+  alt,
+  className,
+  fallback,
+  sizes = '100vw',
+  priority = false,
+}: SafeImageProps) {
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
 
   if (!src || failedSrc === src) {
@@ -105,14 +120,18 @@ export function SafeImage({ src, alt, className, fallback }: SafeImageProps) {
   }
 
   return (
-    <img
-      src={src}
-      alt={alt}
-      loading='lazy'
-      decoding='async'
-      className={className}
-      onError={() => setFailedSrc(src)}
-    />
+    <span className={cn('relative block overflow-hidden', className)}>
+      <Image
+        src={src}
+        alt={alt}
+        fill
+        sizes={sizes}
+        priority={priority}
+        unoptimized={!isOptimizableImage(src)}
+        className='object-cover'
+        onError={() => setFailedSrc(src)}
+      />
+    </span>
   );
 }
 
@@ -228,6 +247,10 @@ function CommentsPanel({
 
   const addCommentMutation = useMutation({
     mutationFn: (commentText: string) => addPostComment(postId, commentText),
+
+    onSuccess: () => {
+      track('comment_submit', { postId });
+    },
 
     onMutate: async (commentText) => {
       await queryClient.cancelQueries({ queryKey: ['comments', postId] });
@@ -441,7 +464,8 @@ function CommentsPanel({
                     <SafeImage
                       src={comment.author.avatarUrl}
                       alt={`Avatar ${comment.author.name}`}
-                      className='size-full object-cover'
+                      className='size-full'
+                      sizes='36px'
                       fallback={<span>{getInitials(comment.author.name)}</span>}
                     />
                   </div>

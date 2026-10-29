@@ -28,6 +28,7 @@ import {
   getUserPosts,
   unfollowUser,
 } from '@/lib/api/users';
+import { track } from '@/lib/analytics';
 import { useAppSelector } from '@/lib/store/hooks';
 import type { PublicProfileResponse } from '@/types/user';
 import { cn } from 'cn';
@@ -66,6 +67,10 @@ export function PublicUserProfile({
   const followMutation = useMutation({
     mutationFn: ({ shouldFollow }: { shouldFollow: boolean }) =>
       shouldFollow ? followUser(username) : unfollowUser(username),
+
+    onSuccess: (_, { shouldFollow }) => {
+      track(shouldFollow ? 'user_follow' : 'user_unfollow', { username });
+    },
 
     onMutate: async ({ shouldFollow }) => {
       await queryClient.cancelQueries({

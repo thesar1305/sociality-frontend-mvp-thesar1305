@@ -4,12 +4,14 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 
 import { ApiPostCard } from '@/components/sociality/api-post-card';
 import { Button } from '@/components/ui/button';
 import { getApiErrorMessage } from '@/lib/api/client';
 import { deletePost, getPostDetail } from '@/lib/api/posts';
 import { getMyProfile } from '@/lib/api/profile';
+import { track } from '@/lib/analytics';
 import { useAppSelector } from '@/lib/store/hooks';
 
 type PostDetailProps = {
@@ -33,6 +35,14 @@ export function PostDetail({ postId, backHref, backLabel }: PostDetailProps) {
     queryFn: getMyProfile,
     enabled: isAuthenticated,
   });
+
+  const viewedPostId = postQuery.data?.data.id;
+
+  useEffect(() => {
+    if (viewedPostId !== undefined) {
+      track('post_view', { postId: viewedPostId });
+    }
+  }, [viewedPostId]);
 
   const deleteMutation = useMutation({
     mutationFn: () => deletePost(postId),
@@ -134,7 +144,7 @@ export function PostDetail({ postId, backHref, backLabel }: PostDetailProps) {
         </p>
       ) : null}
 
-      <ApiPostCard post={post} showDetailLink={false} />
+      <ApiPostCard post={post} showDetailLink={false} priority />
     </section>
   );
 }

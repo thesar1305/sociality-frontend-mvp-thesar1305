@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { avatarThumb } from '@/lib/images';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getApiErrorMessage } from '@/lib/api/client';
@@ -199,7 +200,7 @@ export function UserSearch() {
                 >
                   <Avatar className='size-11'>
                     {user.avatarUrl ? (
-                      <AvatarImage src={user.avatarUrl} alt='' />
+                      <AvatarImage src={avatarThumb(user.avatarUrl, 88)} alt='' />
                     ) : null}
                     <AvatarFallback>{getInitial(user.name)}</AvatarFallback>
                   </Avatar>

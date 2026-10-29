@@ -144,8 +144,8 @@ export function ApiFeed() {
 
       {posts.length > 0 ? (
         <div className='space-y-8'>
-          {posts.map((post) => (
-            <ApiPostCard key={post.id} post={post} />
+          {posts.map((post, index) => (
+            <ApiPostCard key={post.id} post={post} priority={index === 0} />
           ))}
         </div>
       ) : null}

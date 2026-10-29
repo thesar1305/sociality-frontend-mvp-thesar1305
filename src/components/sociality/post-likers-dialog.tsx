@@ -22,6 +22,8 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { getApiErrorMessage } from '@/lib/api/client';
 import { getPostLikers } from '@/lib/api/posts';
+import { track } from '@/lib/analytics';
+import { avatarThumb } from '@/lib/images';
 import { followUser, unfollowUser } from '@/lib/api/users';
 import { useAppSelector } from '@/lib/store/hooks';
 import type { PostLiker } from '@/types/user';
@@ -224,6 +226,12 @@ function LikerRow({ user, postId }: { user: PostLiker; postId: number }) {
     mutationFn: (nextFollowed: boolean) =>
       nextFollowed ? followUser(user.username) : unfollowUser(user.username),
 
+    onSuccess: (_, nextFollowed) => {
+      track(nextFollowed ? 'user_follow' : 'user_unfollow', {
+        username: user.username,
+      });
+    },
+
     onMutate: (nextFollowed) => {
       setOptimisticFollowed(nextFollowed);
     },
@@ -257,7 +265,9 @@ function LikerRow({ user, postId }: { user: PostLiker; postId: number }) {
         className='flex min-w-0 flex-1 items-center gap-3 rounded-lg focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40'
       >
         <Avatar className='size-11'>
-          {user.avatarUrl ? <AvatarImage src={user.avatarUrl} alt='' /> : null}
+          {user.avatarUrl ? (
+            <AvatarImage src={avatarThumb(user.avatarUrl, 88)} alt='' />
+          ) : null}
           <AvatarFallback>{getInitial(user.name)}</AvatarFallback>
         </Avatar>
 

@@ -9,6 +9,7 @@ import { type ChangeEvent, useEffect, useRef, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { avatarThumb } from '@/lib/images';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -178,7 +179,7 @@ function EditProfileFields({ profile }: { profile: MyProfile }) {
       <form className='space-y-5' noValidate onSubmit={onSubmit}>
         <div className='flex flex-col items-center gap-3'>
           <Avatar className='size-24'>
-            {avatarSrc ? <AvatarImage src={avatarSrc} alt='' /> : null}
+            {avatarSrc ? <AvatarImage src={avatarThumb(avatarSrc, 192)} alt='' /> : null}
             <AvatarFallback className='text-3xl'>
               {getInitial(profile.name)}
             </AvatarFallback>

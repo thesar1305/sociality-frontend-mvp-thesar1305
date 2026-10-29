@@ -6,6 +6,7 @@ import { type ReactNode, useState } from 'react';
 
 import { SafeImage } from '@/components/sociality/post-comments';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { avatarThumb } from '@/lib/images';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getApiErrorMessage } from '@/lib/api/client';
@@ -53,7 +54,9 @@ export function ProfileHeader({
     <div className='space-y-5'>
       <div className='flex items-center gap-4'>
         <Avatar className='size-16'>
-          {avatarUrl ? <AvatarImage src={avatarUrl} alt='' /> : null}
+          {avatarUrl ? (
+            <AvatarImage src={avatarThumb(avatarUrl, 128)} alt='' />
+          ) : null}
           <AvatarFallback className='text-xl'>
             {getInitial(name)}
           </AvatarFallback>
@@ -253,7 +256,8 @@ export function TileGrid({
               <SafeImage
                 src={tile.imageUrl}
                 alt={tile.caption ? `Postingan: ${tile.caption}` : 'Postingan'}
-                className='aspect-square w-full bg-muted object-cover transition-opacity hover:opacity-80'
+                className='aspect-square w-full bg-muted transition-opacity hover:opacity-80'
+                sizes='(min-width: 672px) 220px, 33vw'
                 fallback={
                   <div
                     role='img'
