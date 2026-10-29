@@ -2,16 +2,8 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   /* config options here */
-  images: {
-    // Gambar post & avatar dari API disimpan di Cloudinary (akun dvz5kmwqx).
-    remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "res.cloudinary.com",
-        pathname: "/dvz5kmwqx/image/upload/**",
-      },
-    ],
-  },
+  // Gambar Cloudinary dimuat lewat `cloudinaryLoader` (src/lib/images.ts),
+  // jadi tidak memakai optimizer server dan tidak butuh images.remotePatterns.
   turbopack: {
     rules: {
       "*.css": {
