@@ -7,9 +7,9 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-inter);
   --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-geist-sans);
+  --font-heading: var(--font-inter);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -39,82 +39,113 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
+  /* Radius — skala Figma (Foundations > Radius) */
+  --radius-xxs: 2px;
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 12px;
+  --radius-2xl: 16px;
+  --radius-3xl: 20px;
+  --radius-4xl: 24px;
+
+  /* Warna merek & aksen — Figma (Foundations > Colors) */
+  --color-brand-100: #f5faff;
+  --color-brand-200: #7f51f9;
+  --color-brand-300: #6938f2;
+  --color-success: #079455;
+  --color-warning: #fdb022;
+  --color-danger: #b41759;
+
+  /* Tipografi — ukuran font Display Figma. Line-height ~1.2 adalah perkiraan
+     (angka line-height Figma belum terverifikasi). */
+  --text-display-3xl: 3.5rem;
+  --text-display-3xl--line-height: 1.2;
+  --text-display-2xl: 3rem;
+  --text-display-2xl--line-height: 1.2;
+  --text-display-xl: 2.5rem;
+  --text-display-xl--line-height: 1.2;
+  --text-display-lg: 2.25rem;
+  --text-display-lg--line-height: 1.2;
+  --text-display-md: 2rem;
+  --text-display-md--line-height: 1.2;
+  --text-display-sm: 1.75rem;
+  --text-display-sm--line-height: 1.2;
+  --text-display-xs: 1.5rem;
+  --text-display-xs--line-height: 1.25;
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
+  /* Mode terang — neutral & merek dari Figma */
+  --background: #ffffff;
+  --foreground: #0a0d12;
+  --card: #ffffff;
+  --card-foreground: #0a0d12;
+  --popover: #ffffff;
+  --popover-foreground: #0a0d12;
+  --primary: #6938f2;
+  --primary-foreground: #ffffff;
+  --secondary: #f5f5f5;
+  --secondary-foreground: #181d27;
+  --muted: #f5f5f5;
+  --muted-foreground: #535862;
+  --accent: #f5f5f5;
+  --accent-foreground: #0a0d12;
+  --destructive: #b41759;
+  --border: #e9eaeb;
+  --input: #d5d7da;
+  --ring: #7f51f9;
+  --chart-1: #6938f2;
+  --chart-2: #7f51f9;
+  --chart-3: #079455;
+  --chart-4: #fdb022;
+  --chart-5: #b41759;
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --sidebar: #fafafa;
+  --sidebar-foreground: #0a0d12;
+  --sidebar-primary: #6938f2;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f5f5f5;
+  --sidebar-accent-foreground: #0a0d12;
+  --sidebar-border: #e9eaeb;
+  --sidebar-ring: #7f51f9;
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  /* Mode gelap (default) — latar hitam, kartu neutral-950, aksen ungu Figma */
+  --background: #000000;
+  --foreground: #fafafa;
+  --card: #0a0d12;
+  --card-foreground: #fafafa;
+  --popover: #0a0d12;
+  --popover-foreground: #fafafa;
+  --primary: #6938f2;
+  --primary-foreground: #ffffff;
+  --secondary: #181d27;
+  --secondary-foreground: #fafafa;
+  --muted: #181d27;
+  --muted-foreground: #a4a7ae;
+  --accent: #252b37;
+  --accent-foreground: #fafafa;
+  /* Merah Figma (#b41759) kurang kontras di atas hitam; ini versi lebih terang. */
+  --destructive: #f2528f;
+  --border: rgb(255 255 255 / 10%);
+  --input: rgb(255 255 255 / 12%);
+  --ring: #7f51f9;
+  --chart-1: #7f51f9;
+  --chart-2: #6938f2;
+  --chart-3: #079455;
+  --chart-4: #fdb022;
+  --chart-5: #f2528f;
+  --sidebar: #0a0d12;
+  --sidebar-foreground: #fafafa;
+  --sidebar-primary: #6938f2;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #252b37;
+  --sidebar-accent-foreground: #fafafa;
+  --sidebar-border: rgb(255 255 255 / 10%);
+  --sidebar-ring: #7f51f9;
 }
 
 @layer base {

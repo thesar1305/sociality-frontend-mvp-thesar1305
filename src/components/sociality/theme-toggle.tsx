@@ -22,7 +22,7 @@ function getThemeSnapshot(): Theme {
 }
 
 function getServerThemeSnapshot(): Theme {
-  return 'light';
+  return 'dark';
 }
 
 export function ThemeToggle() {

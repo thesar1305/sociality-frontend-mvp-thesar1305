@@ -1,13 +1,13 @@
 import type { Metadata } from 'next';
 import Script from 'next/script';
 import type { ReactNode } from 'react';
-import { Geist, Geist_Mono } from 'next/font/google';
+import { Geist_Mono, Inter } from 'next/font/google';
 
 import './globals.css';
 import { AppProviders } from '@/components/providers/app-providers';
 
-const geistSans = Geist({
-  variable: '--font-geist-sans',
+const inter = Inter({
+  variable: '--font-inter',
   subsets: ['latin'],
 });
 
@@ -20,11 +20,8 @@ const themeScript = `
   (() => {
     try {
       const savedTheme = localStorage.getItem("sociality:theme");
-      const prefersDark = window.matchMedia(
-        "(prefers-color-scheme: dark)",
-      ).matches;
-      const useDark =
-        savedTheme === "dark" || (!savedTheme && prefersDark);
+      // Desain Figma dark-first: gelap kecuali pengguna memilih terang.
+      const useDark = savedTheme !== "light";
 
       document.documentElement.classList.toggle("dark", useDark);
       document.documentElement.style.colorScheme = useDark
@@ -48,7 +45,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
     <html
       lang='id'
       suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable}`}
+      className={`dark ${inter.variable} ${geistMono.variable}`}
     >
       <body className='min-h-screen bg-background font-sans text-foreground antialiased'>
         <Script id='sociality-theme' strategy='beforeInteractive'>
