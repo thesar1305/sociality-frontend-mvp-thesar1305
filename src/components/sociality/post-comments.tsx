@@ -23,6 +23,9 @@ type PostCommentsProps = {
   postId: number;
   postAuthorId?: number;
   commentCount: number;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  hideToggle?: boolean;
 };
 
 const COMMENTS_PER_PAGE = 10;
@@ -70,13 +73,18 @@ export function PostComments({
   postId,
   postAuthorId,
   commentCount,
+  open,
+  onOpenChange,
+  hideToggle = false,
 }: PostCommentsProps) {
   const queryClient = useQueryClient();
   const pathname = usePathname();
   const { isAuthenticated, isHydrated } = useAppSelector((state) => state.auth);
   const isGuest = isHydrated && !isAuthenticated;
 
-  const [isOpen, setIsOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isOpen = open ?? internalOpen;
+  const setIsOpen = onOpenChange ?? setInternalOpen;
   const [page, setPage] = useState(1);
   const [text, setText] = useState('');
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -283,21 +291,27 @@ export function PostComments({
 
   const totalPages = Math.max(pagination?.totalPages ?? 1, 1);
 
+  if (hideToggle && !isOpen) {
+    return null;
+  }
+
   return (
     <div className='mt-4 border-t pt-4'>
-      <Button
-        type='button'
-        variant='outline'
-        aria-expanded={isOpen}
-        aria-controls={`comments-${postId}`}
-        onClick={() => setIsOpen((current) => !current)}
-      >
-        {isOpen
-          ? 'Sembunyikan komentar'
-          : commentCount > 0
-            ? `Lihat ${commentCount} komentar`
-            : 'Tulis komentar'}
-      </Button>
+      {hideToggle ? null : (
+        <Button
+          type='button'
+          variant='outline'
+          aria-expanded={isOpen}
+          aria-controls={`comments-${postId}`}
+          onClick={() => setIsOpen(!isOpen)}
+        >
+          {isOpen
+            ? 'Sembunyikan komentar'
+            : commentCount > 0
+              ? `Lihat ${commentCount} komentar`
+              : 'Tulis komentar'}
+        </Button>
+      )}
 
       {isOpen ? (
         <div id={`comments-${postId}`} className='mt-4 space-y-4'>

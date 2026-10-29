@@ -3,13 +3,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import 'dayjs/locale/id';
-import { Bookmark } from 'lucide-react';
+import relativeTime from 'dayjs/plugin/relativeTime';
+import { Bookmark, Check, Heart, MessageCircle, Send } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 import { PostComments, SafeImage } from '@/components/sociality/post-comments';
-import { Button } from '@/components/ui/button';
 import { getApiErrorMessage } from '@/lib/api/client';
 import {
   getSavedPosts,
@@ -20,6 +20,14 @@ import {
 } from '@/lib/api/posts';
 import { useAppSelector } from '@/lib/store/hooks';
 import type { ApiPost, PostsResponse } from '@/types/feed';
+import { cn } from 'cn';
+
+dayjs.extend(relativeTime);
+
+const CAPTION_PREVIEW_LENGTH = 110;
+
+const actionButtonClassName =
+  'inline-flex items-center gap-1.5 rounded-md p-1 text-sm transition-colors hover:text-brand-200 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40 disabled:pointer-events-none disabled:opacity-50';
 
 type ApiPostCardProps = {
   post: ApiPost;
@@ -74,8 +82,16 @@ export function ApiPostCard({
   const createdAt = dayjs(post.createdAt);
 
   const createdLabel = createdAt.isValid()
-    ? createdAt.locale('id').format('D MMMM YYYY, HH.mm')
+    ? createdAt.locale('id').fromNow()
     : 'Waktu tidak tersedia';
+
+  const createdTitle = createdAt.isValid()
+    ? createdAt.locale('id').format('D MMMM YYYY, HH.mm')
+    : undefined;
+
+  const [commentsOpen, setCommentsOpen] = useState(false);
+  const [captionExpanded, setCaptionExpanded] = useState(false);
+  const [shared, setShared] = useState(false);
 
   const [optimisticLiked, setOptimisticLiked] = useState<boolean | null>(null);
   const [optimisticSaved, setOptimisticSaved] = useState<boolean | null>(null);
@@ -199,148 +215,252 @@ export function ApiPostCard({
     }
   }
 
+  const detailHref =
+    detailSource === 'liked'
+      ? `/posts/${post.id}?from=liked`
+      : detailSource === 'profile'
+        ? `/posts/${post.id}?from=profile`
+        : detailSource === 'public-profile' && detailReturnHref
+          ? `/posts/${post.id}?from=public-profile&returnTo=${encodeURIComponent(
+              detailReturnHref
+            )}`
+          : `/posts/${post.id}`;
+
+  const caption = post.caption ?? '';
+  const captionIsLong =
+    caption.length > CAPTION_PREVIEW_LENGTH || caption.includes('\n');
+
+  async function handleShare() {
+    const url = `${window.location.origin}/posts/${post.id}`;
+
+    try {
+      if (typeof navigator.share === 'function') {
+        await navigator.share({ url, title: `Postingan ${post.author.name}` });
+      } else {
+        await navigator.clipboard.writeText(url);
+      }
+
+      setShared(true);
+      window.setTimeout(() => setShared(false), 2000);
+    } catch {
+      // Dibatalkan pengguna atau clipboard tidak tersedia.
+    }
+  }
+
+  const postImage = (
+    <SafeImage
+      src={post.imageUrl}
+      alt={
+        post.caption
+          ? `Postingan ${post.author.name}: ${post.caption}`
+          : `Postingan ${post.author.name}`
+      }
+      className='aspect-square w-full rounded-xl bg-muted object-cover'
+      fallback={
+        <div
+          role='img'
+          aria-label={`Gambar postingan ${post.author.name} tidak tersedia`}
+          className='flex aspect-square w-full items-center justify-center rounded-xl bg-muted text-sm text-muted-foreground'
+        >
+          Gambar tidak tersedia
+        </div>
+      }
+    />
+  );
+
   return (
-    <article className='overflow-hidden rounded-2xl border bg-card text-card-foreground shadow-sm'>
-      <header className='flex items-center gap-3 p-4'>
-        <div className='flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary font-semibold text-primary-foreground'>
+    <article className='border-b border-border pb-6 text-foreground'>
+      <header className='flex items-center gap-3 pb-3'>
+        <Link
+          href={`/users/${post.author.username}`}
+          prefetch={false}
+          className='flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary font-semibold text-primary-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40'
+        >
           <SafeImage
             src={post.author.avatarUrl}
             alt={`Avatar ${post.author.name}`}
             className='size-full object-cover'
             fallback={<span>{getInitials(post.author.name)}</span>}
           />
-        </div>
+        </Link>
 
         <div className='min-w-0'>
-          <p className='truncate font-semibold'>{post.author.name}</p>
-          <p className='truncate text-sm text-muted-foreground'>
-            @{post.author.username} · {createdLabel}
-          </p>
+          <Link
+            href={`/users/${post.author.username}`}
+            prefetch={false}
+            className='block truncate font-semibold hover:underline'
+          >
+            {post.author.name}
+          </Link>
+          {showDetailLink ? (
+            <Link
+              href={detailHref}
+              prefetch={false}
+              title={createdTitle}
+              className='block truncate text-sm text-muted-foreground hover:underline'
+            >
+              {createdLabel}
+            </Link>
+          ) : (
+            <p
+              title={createdTitle}
+              className='truncate text-sm text-muted-foreground'
+            >
+              {createdLabel}
+            </p>
+          )}
         </div>
       </header>
 
-      <SafeImage
-        src={post.imageUrl}
-        alt={
-          post.caption
-            ? `Postingan ${post.author.name}: ${post.caption}`
-            : `Postingan ${post.author.name}`
-        }
-        className='aspect-square w-full bg-muted object-cover'
-        fallback={
-          <div
-            role='img'
-            aria-label={`Gambar postingan ${post.author.name} tidak tersedia`}
-            className='flex aspect-square w-full items-center justify-center bg-muted text-sm text-muted-foreground'
-          >
-            Gambar tidak tersedia
-          </div>
-        }
-      />
+      {showDetailLink ? (
+        <Link
+          href={detailHref}
+          prefetch={false}
+          className='block rounded-xl focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40'
+        >
+          {postImage}
+        </Link>
+      ) : (
+        postImage
+      )}
 
-      <div className='p-4'>
-        <div className='flex flex-wrap items-center gap-3'>
-          <Button
+      <div className='mt-3 flex items-center justify-between gap-3'>
+        <div className='flex items-center gap-4'>
+          <span className='inline-flex items-center gap-1'>
+            <button
+              type='button'
+              aria-pressed={isLiked}
+              aria-busy={likeMutation.isPending}
+              aria-label={
+                isLiked
+                  ? `Batalkan suka pada postingan ${post.author.name}`
+                  : `Sukai postingan ${post.author.name}`
+              }
+              className={cn(
+                actionButtonClassName,
+                isLiked && 'text-destructive hover:text-destructive'
+              )}
+              onClick={handleLike}
+            >
+              <Heart
+                className={cn('size-6', isLiked && 'fill-current')}
+                aria-hidden='true'
+              />
+            </button>
+            <Link
+              href={`/posts/${post.id}/likes`}
+              prefetch={false}
+              className='rounded text-sm font-medium hover:underline focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40'
+              aria-label={`Lihat ${likeCount} pengguna yang menyukai postingan ini`}
+            >
+              {likeCount}
+            </Link>
+          </span>
+
+          <button
             type='button'
-            variant={isLiked ? 'default' : 'outline'}
-            aria-pressed={isLiked}
-            aria-busy={likeMutation.isPending}
-            aria-label={
-              isLiked
-                ? `Batalkan suka pada postingan ${post.author.name}`
-                : `Sukai postingan ${post.author.name}`
-            }
-            onClick={handleLike}
+            aria-expanded={commentsOpen}
+            aria-controls={`comments-${post.id}`}
+            aria-label={`Komentar, ${post.commentCount} komentar`}
+            className={actionButtonClassName}
+            onClick={() => setCommentsOpen((current) => !current)}
           >
-            {isLiked ? 'Disukai' : 'Suka'}
-          </Button>
+            <MessageCircle className='size-6' aria-hidden='true' />
+            <span className='font-medium'>{post.commentCount}</span>
+          </button>
 
-          <Button
+          <button
             type='button'
-            variant={isSaved ? 'default' : 'outline'}
-            aria-pressed={isSaved}
-            aria-busy={saveMutation.isPending}
-            aria-label={
-              isSaved
-                ? `Batalkan simpan postingan ${post.author.name}`
-                : `Simpan postingan ${post.author.name}`
-            }
-            disabled={
-              isAuthenticated &&
-              (savedPostsQuery.isPending || savedPostsQuery.isError)
-            }
-            onClick={handleSave}
+            aria-label={shared ? 'Tautan disalin' : 'Bagikan postingan'}
+            className={actionButtonClassName}
+            onClick={handleShare}
           >
-            <Bookmark
-              className={isSaved ? 'size-4 fill-current' : 'size-4'}
-              aria-hidden='true'
-            />
-
-            {isSaved ? 'Tersimpan' : 'Simpan'}
-          </Button>
-
-          <Link
-            href={`/posts/${post.id}/likes`}
-            prefetch={false}
-            className='rounded text-sm font-medium text-violet-500 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500'
-            aria-label={`Lihat ${likeCount} pengguna yang menyukai postingan ini`}
-          >
-            {likeCount} suka
-          </Link>
+            {shared ? (
+              <Check className='size-6' aria-hidden='true' />
+            ) : (
+              <Send className='size-6' aria-hidden='true' />
+            )}
+          </button>
         </div>
 
-        {likeMutation.isError ? (
-          <p role='alert' className='mt-3 text-sm text-destructive'>
-            {getApiErrorMessage(likeMutation.error)}
-          </p>
-        ) : null}
-
-        {savedPostsQuery.isError ? (
-          <p role='alert' className='mt-3 text-sm text-destructive'>
-            Status simpan tidak dapat dimuat:{' '}
-            {getApiErrorMessage(savedPostsQuery.error)}
-          </p>
-        ) : null}
-
-        {saveMutation.isError ? (
-          <p role='alert' className='mt-3 text-sm text-destructive'>
-            {getApiErrorMessage(saveMutation.error)}
-          </p>
-        ) : null}
-
-        {showDetailLink ? (
-          <Link
-            href={
-              detailSource === 'liked'
-                ? `/posts/${post.id}?from=liked`
-                : detailSource === 'profile'
-                  ? `/posts/${post.id}?from=profile`
-                  : detailSource === 'public-profile' && detailReturnHref
-                    ? `/posts/${post.id}?from=public-profile&returnTo=${encodeURIComponent(
-                        detailReturnHref
-                      )}`
-                    : `/posts/${post.id}`
-            }
-            prefetch={false}
-            className='mt-3 inline-flex text-sm font-medium text-violet-500 transition hover:text-violet-400'
-          >
-            Lihat detail
-          </Link>
-        ) : null}
-
-        {post.caption ? (
-          <p className='mt-4 leading-7'>
-            <span className='mr-2 font-semibold'>@{post.author.username}</span>
-            {post.caption}
-          </p>
-        ) : null}
-
-        <PostComments
-          postId={post.id}
-          postAuthorId={post.author.id}
-          commentCount={post.commentCount}
-        />
+        <button
+          type='button'
+          aria-pressed={isSaved}
+          aria-busy={saveMutation.isPending}
+          aria-label={
+            isSaved
+              ? `Batalkan simpan postingan ${post.author.name}`
+              : `Simpan postingan ${post.author.name}`
+          }
+          disabled={
+            isAuthenticated &&
+            (savedPostsQuery.isPending || savedPostsQuery.isError)
+          }
+          className={cn(actionButtonClassName, isSaved && 'text-brand-200')}
+          onClick={handleSave}
+        >
+          <Bookmark
+            className={cn('size-6', isSaved && 'fill-current')}
+            aria-hidden='true'
+          />
+        </button>
       </div>
+
+      <span role='status' className='sr-only'>
+        {shared ? 'Tautan postingan disalin.' : ''}
+      </span>
+
+      {likeMutation.isError ? (
+        <p role='alert' className='mt-3 text-sm text-destructive'>
+          {getApiErrorMessage(likeMutation.error)}
+        </p>
+      ) : null}
+
+      {savedPostsQuery.isError ? (
+        <p role='alert' className='mt-3 text-sm text-destructive'>
+          Status simpan tidak dapat dimuat:{' '}
+          {getApiErrorMessage(savedPostsQuery.error)}
+        </p>
+      ) : null}
+
+      {saveMutation.isError ? (
+        <p role='alert' className='mt-3 text-sm text-destructive'>
+          {getApiErrorMessage(saveMutation.error)}
+        </p>
+      ) : null}
+
+      {caption ? (
+        <div className='mt-3 text-sm leading-6'>
+          <p className='font-semibold'>{post.author.name}</p>
+          <p
+            className={cn(
+              'whitespace-pre-line text-foreground/90',
+              captionIsLong && !captionExpanded && 'line-clamp-2'
+            )}
+          >
+            {caption}
+          </p>
+          {captionIsLong ? (
+            <button
+              type='button'
+              aria-expanded={captionExpanded}
+              className='mt-1 rounded text-sm font-semibold text-brand-200 hover:underline focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40'
+              onClick={() => setCaptionExpanded((current) => !current)}
+            >
+              {captionExpanded ? 'Sembunyikan' : 'Selengkapnya'}
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+
+      <PostComments
+        postId={post.id}
+        postAuthorId={post.author.id}
+        commentCount={post.commentCount}
+        open={commentsOpen}
+        onOpenChange={setCommentsOpen}
+        hideToggle
+      />
     </article>
   );
 }
