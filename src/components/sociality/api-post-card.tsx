@@ -1,4 +1,3 @@
-/* eslint-disable @next/next/no-img-element */
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -6,8 +5,9 @@ import dayjs from 'dayjs';
 import 'dayjs/locale/id';
 import { Bookmark } from 'lucide-react';
 import Link from 'next/link';
+import { useState } from 'react';
 
-import { PostComments } from '@/components/sociality/post-comments';
+import { PostComments, SafeImage } from '@/components/sociality/post-comments';
 import { Button } from '@/components/ui/button';
 import { getApiErrorMessage } from '@/lib/api/client';
 import {
@@ -56,7 +56,7 @@ export function ApiPostCard({
     staleTime: 30_000,
   });
 
-  const isSaved =
+  const serverSaved =
     savedPostsQuery.data?.data.posts.some(
       (savedPost) => savedPost.id === post.id
     ) ?? false;
@@ -67,12 +67,33 @@ export function ApiPostCard({
     ? createdAt.locale('id').format('D MMMM YYYY, HH.mm')
     : 'Waktu tidak tersedia';
 
-  const likeMutation = useMutation({
-    mutationFn: () =>
-      post.likedByMe ? unlikePost(post.id) : likePost(post.id),
+  const [optimisticLiked, setOptimisticLiked] = useState<boolean | null>(null);
+  const [optimisticSaved, setOptimisticSaved] = useState<boolean | null>(null);
 
-    onSuccess: () => {
-      if (post.likedByMe) {
+  const isLiked = optimisticLiked ?? post.likedByMe;
+  const isSaved = optimisticSaved ?? serverSaved;
+  const likeDelta =
+    optimisticLiked === null || optimisticLiked === post.likedByMe
+      ? 0
+      : optimisticLiked
+        ? 1
+        : -1;
+  const likeCount = Math.max(post.likeCount + likeDelta, 0);
+
+  const likeMutation = useMutation({
+    mutationFn: (nextLiked: boolean) =>
+      nextLiked ? likePost(post.id) : unlikePost(post.id),
+
+    onMutate: (nextLiked) => {
+      setOptimisticLiked(nextLiked);
+    },
+
+    onError: () => {
+      setOptimisticLiked(null);
+    },
+
+    onSuccess: (_, nextLiked) => {
+      if (!nextLiked) {
         queryClient.setQueriesData<PostsResponse>(
           {
             queryKey: ['posts', 'liked'],
@@ -106,25 +127,39 @@ export function ApiPostCard({
           }
         );
       }
+    },
 
-      void queryClient.invalidateQueries({
+    onSettled: async () => {
+      await queryClient.invalidateQueries({
         queryKey: ['posts'],
       });
+      setOptimisticLiked(null);
     },
   });
-  const saveMutation = useMutation({
-    mutationFn: () => (isSaved ? unsavePost(post.id) : savePost(post.id)),
 
-    onSuccess: () => {
-      void queryClient.invalidateQueries({
+  const saveMutation = useMutation({
+    mutationFn: (nextSaved: boolean) =>
+      nextSaved ? savePost(post.id) : unsavePost(post.id),
+
+    onMutate: (nextSaved) => {
+      setOptimisticSaved(nextSaved);
+    },
+
+    onError: () => {
+      setOptimisticSaved(null);
+    },
+
+    onSettled: async () => {
+      await queryClient.invalidateQueries({
         queryKey: ['posts', 'saved'],
       });
+      setOptimisticSaved(null);
     },
   });
 
   function handleLike() {
     if (!likeMutation.isPending) {
-      likeMutation.mutate();
+      likeMutation.mutate(!isLiked);
     }
   }
 
@@ -134,7 +169,7 @@ export function ApiPostCard({
       !savedPostsQuery.isError &&
       !saveMutation.isPending
     ) {
-      saveMutation.mutate();
+      saveMutation.mutate(!isSaved);
     }
   }
 
@@ -142,15 +177,12 @@ export function ApiPostCard({
     <article className='overflow-hidden rounded-2xl border bg-card text-card-foreground shadow-sm'>
       <header className='flex items-center gap-3 p-4'>
         <div className='flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary font-semibold text-primary-foreground'>
-          {post.author.avatarUrl ? (
-            <img
-              src={post.author.avatarUrl}
-              alt={`Avatar ${post.author.name}`}
-              className='size-full object-cover'
-            />
-          ) : (
-            <span>{getInitials(post.author.name)}</span>
-          )}
+          <SafeImage
+            src={post.author.avatarUrl}
+            alt={`Avatar ${post.author.name}`}
+            className='size-full object-cover'
+            fallback={<span>{getInitials(post.author.name)}</span>}
+          />
         </div>
 
         <div className='min-w-0'>
@@ -161,7 +193,7 @@ export function ApiPostCard({
         </div>
       </header>
 
-      <img
+      <SafeImage
         src={post.imageUrl}
         alt={
           post.caption
@@ -169,43 +201,45 @@ export function ApiPostCard({
             : `Postingan ${post.author.name}`
         }
         className='aspect-square w-full bg-muted object-cover'
+        fallback={
+          <div
+            role='img'
+            aria-label={`Gambar postingan ${post.author.name} tidak tersedia`}
+            className='flex aspect-square w-full items-center justify-center bg-muted text-sm text-muted-foreground'
+          >
+            Gambar tidak tersedia
+          </div>
+        }
       />
 
       <div className='p-4'>
         <div className='flex flex-wrap items-center gap-3'>
           <Button
             type='button'
-            variant={post.likedByMe ? 'default' : 'outline'}
-            disabled={likeMutation.isPending}
-            aria-pressed={post.likedByMe}
+            variant={isLiked ? 'default' : 'outline'}
+            aria-pressed={isLiked}
+            aria-busy={likeMutation.isPending}
             aria-label={
-              post.likedByMe
+              isLiked
                 ? `Batalkan suka pada postingan ${post.author.name}`
                 : `Sukai postingan ${post.author.name}`
             }
             onClick={handleLike}
           >
-            {likeMutation.isPending
-              ? 'Memproses...'
-              : post.likedByMe
-                ? 'Disukai'
-                : 'Suka'}
+            {isLiked ? 'Disukai' : 'Suka'}
           </Button>
 
           <Button
             type='button'
             variant={isSaved ? 'default' : 'outline'}
             aria-pressed={isSaved}
+            aria-busy={saveMutation.isPending}
             aria-label={
               isSaved
                 ? `Batalkan simpan postingan ${post.author.name}`
                 : `Simpan postingan ${post.author.name}`
             }
-            disabled={
-              savedPostsQuery.isPending ||
-              savedPostsQuery.isError ||
-              saveMutation.isPending
-            }
+            disabled={savedPostsQuery.isPending || savedPostsQuery.isError}
             onClick={handleSave}
           >
             <Bookmark
@@ -213,20 +247,16 @@ export function ApiPostCard({
               aria-hidden='true'
             />
 
-            {saveMutation.isPending
-              ? 'Memproses...'
-              : isSaved
-                ? 'Tersimpan'
-                : 'Simpan'}
+            {isSaved ? 'Tersimpan' : 'Simpan'}
           </Button>
 
           <Link
             href={`/posts/${post.id}/likes`}
             prefetch={false}
             className='rounded text-sm font-medium text-violet-500 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500'
-            aria-label={`Lihat ${post.likeCount} pengguna yang menyukai postingan ini`}
+            aria-label={`Lihat ${likeCount} pengguna yang menyukai postingan ini`}
           >
-            {post.likeCount} suka
+            {likeCount} suka
           </Link>
         </div>
 

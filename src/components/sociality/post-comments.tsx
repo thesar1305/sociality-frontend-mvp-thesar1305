@@ -4,7 +4,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import 'dayjs/locale/id';
-import { type FormEvent, useState } from 'react';
+import { type FormEvent, type ReactNode, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { getApiErrorMessage } from '@/lib/api/client';
@@ -14,7 +14,7 @@ import {
   getPostComments,
 } from '@/lib/api/comments';
 import { getMyProfile } from '@/lib/api/profile';
-import type { CommentsResponse } from '@/types/comment';
+import type { ApiComment, CommentsResponse } from '@/types/comment';
 
 type PostCommentsProps = {
   postId: number;
@@ -33,6 +33,32 @@ function getInitials(name: string) {
       .map((part) => part.charAt(0))
       .join('')
       .toUpperCase() || 'U'
+  );
+}
+
+type SafeImageProps = {
+  src: string | null | undefined;
+  alt: string;
+  className?: string;
+  fallback: ReactNode;
+};
+
+export function SafeImage({ src, alt, className, fallback }: SafeImageProps) {
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
+
+  if (!src || failedSrc === src) {
+    return <>{fallback}</>;
+  }
+
+  return (
+    <img
+      src={src}
+      alt={alt}
+      loading='lazy'
+      decoding='async'
+      className={className}
+      onError={() => setFailedSrc(src)}
+    />
   );
 }
 
@@ -64,11 +90,69 @@ export function PostComments({ postId, commentCount }: PostCommentsProps) {
   const addCommentMutation = useMutation({
     mutationFn: (commentText: string) => addPostComment(postId, commentText),
 
-    onSuccess: async () => {
+    onMutate: async (commentText) => {
+      const firstPageKey = ['comments', postId, 1, COMMENTS_PER_PAGE];
+
+      await queryClient.cancelQueries({ queryKey: ['comments', postId] });
+
+      const previousComments =
+        queryClient.getQueryData<CommentsResponse>(firstPageKey);
+      const profile = profileQuery.data?.data.profile;
+
       setText('');
       setPage(1);
-      setSuccessMessage('Komentar berhasil dikirim.');
 
+      if (previousComments && profile) {
+        const optimisticComment: ApiComment = {
+          id: -Date.now(),
+          text: commentText,
+          createdAt: new Date().toISOString(),
+          author: {
+            id: profile.id,
+            username: profile.username,
+            name: profile.name,
+            avatarUrl: profile.avatarUrl,
+          },
+        };
+        const { pagination } = previousComments.data;
+        const nextTotal = pagination.total + 1;
+
+        queryClient.setQueryData<CommentsResponse>(firstPageKey, {
+          ...previousComments,
+          data: {
+            ...previousComments.data,
+            comments: [
+              optimisticComment,
+              ...previousComments.data.comments,
+            ].slice(0, pagination.limit),
+            pagination: {
+              ...pagination,
+              total: nextTotal,
+              totalPages: Math.max(Math.ceil(nextTotal / pagination.limit), 1),
+            },
+          },
+        });
+      }
+
+      return { firstPageKey, previousComments, commentText };
+    },
+
+    onError: (_error, _commentText, context) => {
+      if (context?.previousComments) {
+        queryClient.setQueryData(
+          context.firstPageKey,
+          context.previousComments
+        );
+      }
+
+      setText((currentText) => currentText || context?.commentText || '');
+    },
+
+    onSuccess: () => {
+      setSuccessMessage('Komentar berhasil dikirim.');
+    },
+
+    onSettled: async () => {
       await Promise.all([
         queryClient.invalidateQueries({
           queryKey: ['comments', postId],
@@ -234,15 +318,14 @@ export function PostComments({ postId, commentCount }: PostCommentsProps) {
                   return (
                     <li key={comment.id} className='flex gap-3'>
                       <div className='flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted text-sm font-semibold'>
-                        {comment.author.avatarUrl ? (
-                          <img
-                            src={comment.author.avatarUrl}
-                            alt={`Avatar ${comment.author.name}`}
-                            className='size-full object-cover'
-                          />
-                        ) : (
-                          <span>{getInitials(comment.author.name)}</span>
-                        )}
+                        <SafeImage
+                          src={comment.author.avatarUrl}
+                          alt={`Avatar ${comment.author.name}`}
+                          className='size-full object-cover'
+                          fallback={
+                            <span>{getInitials(comment.author.name)}</span>
+                          }
+                        />
                       </div>
 
                       <div className='min-w-0 flex-1 rounded-xl bg-muted/50 px-4 py-3'>
@@ -261,7 +344,7 @@ export function PostComments({ postId, commentCount }: PostCommentsProps) {
                               {createdLabel}
                             </time>
 
-                            {comment.author.id === currentUserId ? (
+                            {comment.author.id === currentUserId && comment.id > 0 ? (
                               <Button
                                 type='button'
                                 variant='ghost'
@@ -358,9 +441,7 @@ export function PostComments({ postId, commentCount }: PostCommentsProps) {
                 type='submit'
                 disabled={!text.trim() || addCommentMutation.isPending}
               >
-                {addCommentMutation.isPending
-                  ? 'Mengirim...'
-                  : 'Kirim komentar'}
+                Kirim komentar
               </Button>
             </div>
 

@@ -1,15 +1,28 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { Search } from 'lucide-react';
 import Link from 'next/link';
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { getApiErrorMessage } from '@/lib/api/client';
 import { searchUsers } from '@/lib/api/users';
 
 const USERS_PER_PAGE = 10;
+const SEARCH_DEBOUNCE_MS = 400;
+
+function useDebouncedValue(value: string, delay: number) {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => setDebouncedValue(value), delay);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [value, delay]);
+
+  return [debouncedValue, setDebouncedValue] as const;
+}
 
 function getInitials(name: string) {
   return (
@@ -24,7 +37,10 @@ function getInitials(name: string) {
 
 export function UserSearch() {
   const [draftQuery, setDraftQuery] = useState('');
-  const [submittedQuery, setSubmittedQuery] = useState('');
+  const [submittedQuery, setSubmittedQuery] = useDebouncedValue(
+    draftQuery.trim(),
+    SEARCH_DEBOUNCE_MS
+  );
   const [page, setPage] = useState(1);
 
   const usersQuery = useQuery({
@@ -36,6 +52,7 @@ export function UserSearch() {
         limit: USERS_PER_PAGE,
       }),
     enabled: submittedQuery.length > 0,
+    placeholderData: keepPreviousData,
   });
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -76,7 +93,10 @@ export function UserSearch() {
           value={draftQuery}
           placeholder='Cari nama atau username...'
           className='min-w-0 flex-1 rounded-xl border bg-background px-4 py-3 outline-none transition focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20'
-          onChange={(event) => setDraftQuery(event.target.value)}
+          onChange={(event) => {
+            setDraftQuery(event.target.value);
+            setPage(1);
+          }}
         />
 
         <Button type='submit' disabled={!draftQuery.trim()}>

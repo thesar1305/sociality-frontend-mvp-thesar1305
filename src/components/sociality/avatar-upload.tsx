@@ -1,9 +1,9 @@
-/* eslint-disable @next/next/no-img-element */
 'use client';
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { type ChangeEvent, useEffect, useRef, useState } from 'react';
 
+import { SafeImage } from '@/components/sociality/post-comments';
 import { Button } from '@/components/ui/button';
 import { getApiErrorMessage } from '@/lib/api/client';
 import { updateMyAvatar } from '@/lib/api/profile';
@@ -102,15 +102,12 @@ export function AvatarUpload({ profile }: AvatarUploadProps) {
   return (
     <div className='-mt-16 flex flex-col items-start gap-4 sm:flex-row sm:items-end'>
       <div className='flex h-32 w-32 shrink-0 items-center justify-center overflow-hidden rounded-full border-4 border-card bg-muted text-3xl font-bold'>
-        {imageUrl ? (
-          <img
-            src={imageUrl}
-            alt={`Avatar ${profile.name}`}
-            className='h-full w-full object-cover'
-          />
-        ) : (
-          <span>{getInitials(profile.name)}</span>
-        )}
+        <SafeImage
+          src={imageUrl}
+          alt={`Avatar ${profile.name}`}
+          className='h-full w-full object-cover'
+          fallback={<span>{getInitials(profile.name)}</span>}
+        />
       </div>
 
       <div className='space-y-2 pb-1'>

@@ -1,4 +1,3 @@
-/* eslint-disable @next/next/no-img-element */
 'use client';
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -6,6 +5,7 @@ import dayjs from 'dayjs';
 import 'dayjs/locale/id';
 import Link from 'next/link';
 
+import { SafeImage } from '@/components/sociality/post-comments';
 import { Button } from '@/components/ui/button';
 import { getApiErrorMessage } from '@/lib/api/client';
 import { unsavePost } from '@/lib/api/posts';
@@ -26,7 +26,15 @@ export function SavedPostCard({ post }: SavedPostCardProps) {
   const unsaveMutation = useMutation({
     mutationFn: () => unsavePost(post.id),
 
-    onSuccess: () => {
+    onMutate: async () => {
+      await queryClient.cancelQueries({
+        queryKey: ['posts', 'saved'],
+      });
+
+      const previousQueries = queryClient.getQueriesData<SavedPostsResponse>({
+        queryKey: ['posts', 'saved'],
+      });
+
       queryClient.setQueriesData<SavedPostsResponse>(
         {
           queryKey: ['posts', 'saved'],
@@ -60,14 +68,25 @@ export function SavedPostCard({ post }: SavedPostCardProps) {
         }
       );
 
+      return { previousQueries };
+    },
+
+    onError: (_error, _variables, context) => {
+      context?.previousQueries.forEach(([queryKey, data]) => {
+        queryClient.setQueryData(queryKey, data);
+      });
+    },
+
+    onSettled: () => {
       void queryClient.invalidateQueries({
         queryKey: ['posts', 'saved'],
       });
     },
   });
+
   return (
     <article className='overflow-hidden rounded-2xl border bg-card text-card-foreground shadow-sm'>
-      <img
+      <SafeImage
         src={post.imageUrl}
         alt={
           post.caption
@@ -75,6 +94,15 @@ export function SavedPostCard({ post }: SavedPostCardProps) {
             : 'Postingan tersimpan'
         }
         className='aspect-square w-full bg-muted object-cover'
+        fallback={
+          <div
+            role='img'
+            aria-label='Gambar postingan tersimpan tidak tersedia'
+            className='flex aspect-square w-full items-center justify-center bg-muted text-sm text-muted-foreground'
+          >
+            Gambar tidak tersedia
+          </div>
+        }
       />
 
       <div className='space-y-4 p-4'>
