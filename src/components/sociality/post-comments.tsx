@@ -8,7 +8,13 @@ import { type FormEvent, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { getApiErrorMessage } from '@/lib/api/client';
-import { addPostComment, getPostComments } from '@/lib/api/comments';
+import {
+  addPostComment,
+  deleteComment,
+  getPostComments,
+} from '@/lib/api/comments';
+import { getMyProfile } from '@/lib/api/profile';
+import type { CommentsResponse } from '@/types/comment';
 
 type PostCommentsProps = {
   postId: number;
@@ -48,7 +54,13 @@ export function PostComments({ postId, commentCount }: PostCommentsProps) {
       }),
     enabled: isOpen,
   });
+  const profileQuery = useQuery({
+    queryKey: ['me'],
+    queryFn: getMyProfile,
+    staleTime: 5 * 60 * 1000,
+  });
 
+  const currentUserId = profileQuery.data?.data.profile.id;
   const addCommentMutation = useMutation({
     mutationFn: (commentText: string) => addPostComment(postId, commentText),
 
@@ -81,6 +93,83 @@ export function PostComments({ postId, commentCount }: PostCommentsProps) {
 
     addCommentMutation.mutate(trimmedText);
   }
+
+  function handleDeleteComment(commentId: number) {
+    if (deleteCommentMutation.isPending) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      'Hapus komentar ini? Tindakan ini tidak dapat dibatalkan.'
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setSuccessMessage(null);
+    deleteCommentMutation.mutate(commentId);
+  }
+
+  const deleteCommentMutation = useMutation({
+    mutationFn: (commentId: number) => deleteComment(commentId),
+
+    onSuccess: async (_, deletedCommentId) => {
+      const currentPageCommentCount =
+        commentsQuery.data?.data.comments.length ?? 0;
+
+      queryClient.setQueriesData<CommentsResponse>(
+        {
+          queryKey: ['comments', postId],
+        },
+        (currentResponse) => {
+          if (!currentResponse) {
+            return currentResponse;
+          }
+
+          const nextTotal = Math.max(
+            currentResponse.data.pagination.total - 1,
+            0
+          );
+
+          const nextTotalPages = Math.max(
+            Math.ceil(nextTotal / currentResponse.data.pagination.limit),
+            1
+          );
+
+          return {
+            ...currentResponse,
+            data: {
+              ...currentResponse.data,
+              comments: currentResponse.data.comments.filter(
+                (comment) => comment.id !== deletedCommentId
+              ),
+              pagination: {
+                ...currentResponse.data.pagination,
+                total: nextTotal,
+                totalPages: nextTotalPages,
+              },
+            },
+          };
+        }
+      );
+
+      setSuccessMessage('Komentar berhasil dihapus.');
+
+      if (currentPageCommentCount === 1 && page > 1) {
+        setPage((currentPage) => Math.max(currentPage - 1, 1));
+      }
+
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ['comments', postId],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ['posts'],
+        }),
+      ]);
+    },
+  });
 
   const comments = commentsQuery.data?.data.comments ?? [];
 
@@ -157,16 +246,40 @@ export function PostComments({ postId, commentCount }: PostCommentsProps) {
                       </div>
 
                       <div className='min-w-0 flex-1 rounded-xl bg-muted/50 px-4 py-3'>
-                        <div className='flex flex-wrap items-baseline justify-between gap-2'>
-                          <p className='font-semibold'>{comment.author.name}</p>
-                          <time className='text-xs text-muted-foreground'>
-                            {createdLabel}
-                          </time>
-                        </div>
+                        <div className='flex flex-wrap items-start justify-between gap-3'>
+                          <div className='min-w-0'>
+                            <p className='font-semibold'>
+                              {comment.author.name}
+                            </p>
+                            <p className='text-sm text-muted-foreground'>
+                              @{comment.author.username}
+                            </p>
+                          </div>
 
-                        <p className='text-sm text-muted-foreground'>
-                          @{comment.author.username}
-                        </p>
+                          <div className='flex items-center gap-2'>
+                            <time className='text-xs text-muted-foreground'>
+                              {createdLabel}
+                            </time>
+
+                            {comment.author.id === currentUserId ? (
+                              <Button
+                                type='button'
+                                variant='ghost'
+                                className='h-auto px-2 py-1 text-xs text-destructive hover:text-destructive'
+                                disabled={
+                                  deleteCommentMutation.isPending &&
+                                  deleteCommentMutation.variables === comment.id
+                                }
+                                onClick={() => handleDeleteComment(comment.id)}
+                              >
+                                {deleteCommentMutation.isPending &&
+                                deleteCommentMutation.variables === comment.id
+                                  ? 'Menghapus...'
+                                  : 'Hapus'}
+                              </Button>
+                            ) : null}
+                          </div>
+                        </div>
 
                         <p className='mt-2 whitespace-pre-wrap break-words text-sm leading-6'>
                           {comment.text}
@@ -181,6 +294,12 @@ export function PostComments({ postId, commentCount }: PostCommentsProps) {
                 Belum ada komentar. Jadilah yang pertama.
               </p>
             )
+          ) : null}
+
+          {deleteCommentMutation.isError ? (
+            <p role='alert' className='text-sm text-destructive'>
+              {getApiErrorMessage(deleteCommentMutation.error)}
+            </p>
           ) : null}
 
           {commentsQuery.isSuccess && totalPages > 1 ? (

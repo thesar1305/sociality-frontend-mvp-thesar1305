@@ -32,3 +32,8 @@ export async function addPostComment(postId: number, text: string) {
 
   return response.data;
 }
+export async function deleteComment(commentId: number) {
+  const response = await apiClient.delete(`/api/comments/${commentId}`);
+
+  return response.data;
+}
