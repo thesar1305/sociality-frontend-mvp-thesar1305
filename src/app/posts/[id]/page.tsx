@@ -26,14 +26,22 @@ export default async function PostPage({
   const [{ id }, { from }] = await Promise.all([params, searchParams]);
   const postId = Number(id);
   const backHref =
-    from === 'saved' ? '/me/saved' : from === 'liked' ? '/me/likes' : '/feed';
+    from === 'saved'
+      ? '/me/saved'
+      : from === 'liked'
+        ? '/me/likes'
+        : from === 'profile'
+          ? '/me'
+          : '/feed';
 
   const backLabel =
     from === 'saved'
       ? 'Kembali ke tersimpan'
       : from === 'liked'
         ? 'Kembali ke postingan disukai'
-        : 'Kembali ke feed';
+        : from === 'profile'
+          ? 'Kembali ke profil'
+          : 'Kembali ke feed';
 
   if (!Number.isInteger(postId) || postId <= 0) {
     notFound();

@@ -22,7 +22,7 @@ import type { ApiPost, PostsResponse } from '@/types/feed';
 type ApiPostCardProps = {
   post: ApiPost;
   showDetailLink?: boolean;
-  detailSource?: 'liked';
+  detailSource?: 'liked' | 'profile';
 };
 
 function getInitials(name: string) {
@@ -252,7 +252,9 @@ export function ApiPostCard({
             href={
               detailSource === 'liked'
                 ? `/posts/${post.id}?from=liked`
-                : `/posts/${post.id}`
+                : detailSource === 'profile'
+                  ? `/posts/${post.id}?from=profile`
+                  : `/posts/${post.id}`
             }
             prefetch={false}
             className='mt-3 inline-flex text-sm font-medium text-violet-500 transition hover:text-violet-400'
