@@ -1,4 +1,3 @@
-/* eslint-disable @next/next/no-img-element */
 'use client';
 
 import {
@@ -25,7 +24,7 @@ import {
 
 import { Button } from '@/components/ui/button';
 import { track } from '@/lib/analytics';
-import { isOptimizableImage } from '@/lib/images';
+import { cloudinaryLoader, isOptimizableImage } from '@/lib/images';
 import { cn } from 'cn';
 import {
   Dialog,
@@ -119,6 +118,8 @@ export function SafeImage({
     return <>{fallback}</>;
   }
 
+  const optimizable = isOptimizableImage(src);
+
   return (
     <span className={cn('relative block overflow-hidden', className)}>
       <Image
@@ -127,7 +128,8 @@ export function SafeImage({
         fill
         sizes={sizes}
         priority={priority}
-        unoptimized={!isOptimizableImage(src)}
+        loader={optimizable ? cloudinaryLoader : undefined}
+        unoptimized={!optimizable}
         className='object-cover'
         onError={() => setFailedSrc(src)}
       />
