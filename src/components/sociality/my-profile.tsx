@@ -1,80 +1,75 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
-import dayjs from 'dayjs';
-import 'dayjs/locale/id';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import { Bookmark, Check, LayoutGrid, Send } from 'lucide-react';
 import Link from 'next/link';
-import { useState } from 'react';
+import { type ReactNode, useMemo, useState } from 'react';
 
-import { ApiPostCard } from '@/components/sociality/api-post-card';
-import { AvatarUpload } from '@/components/sociality/avatar-upload';
-import { EditProfileForm } from '@/components/sociality/edit-profile-form';
-import { Button } from '@/components/ui/button';
+import { SafeImage } from '@/components/sociality/post-comments';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button, buttonVariants } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { getApiErrorMessage } from '@/lib/api/client';
 import { getMyProfile } from '@/lib/api/profile';
+import { getSavedPosts } from '@/lib/api/posts';
 import { getUserPosts } from '@/lib/api/users';
+import { cn } from 'cn';
 
-const POSTS_PER_PAGE = 10;
+const TILES_PER_PAGE = 12;
+
+type GridTile = {
+  id: number;
+  imageUrl: string;
+  caption: string | null;
+};
+
+type TabValue = 'gallery' | 'saved';
+
+function getInitial(name: string) {
+  return name.trim().charAt(0).toUpperCase() || 'U';
+}
 
 export function MyProfile() {
-  const [isEditing, setIsEditing] = useState(false);
-  const [page, setPage] = useState(1);
+  const [tab, setTab] = useState<TabValue>('gallery');
+  const [shared, setShared] = useState(false);
 
   const profileQuery = useQuery({
     queryKey: ['me'],
     queryFn: getMyProfile,
   });
 
-  const username = profileQuery.data?.data.profile.username;
-
-  const postsQuery = useQuery({
-    queryKey: ['posts', 'me', username, page, POSTS_PER_PAGE],
-    queryFn: () => {
-      if (!username) {
-        return Promise.reject(new Error('Profil pengguna belum tersedia.'));
-      }
-
-      return getUserPosts({
-        username,
-        page,
-        limit: POSTS_PER_PAGE,
-      });
-    },
-    enabled: Boolean(username),
-  });
-
-  if (profileQuery.isPending || (Boolean(username) && postsQuery.isPending)) {
+  if (profileQuery.isPending) {
     return (
-      <div
-        role='status'
-        className='rounded-2xl border bg-card p-6 text-sm text-muted-foreground'
-      >
-        Memuat profil dan postingan...
+      <div role='status' aria-label='Memuat profil' className='space-y-6'>
+        <div className='flex items-center gap-4'>
+          <Skeleton className='size-16 rounded-full' />
+          <div className='space-y-2'>
+            <Skeleton className='h-4 w-32' />
+            <Skeleton className='h-3 w-20' />
+          </div>
+        </div>
+        <Skeleton className='h-10 w-full rounded-full' />
+        <Skeleton className='h-16 w-full' />
       </div>
     );
   }
 
-  if (profileQuery.isError || postsQuery.isError) {
-    const error = profileQuery.error ?? postsQuery.error;
-
+  if (profileQuery.isError) {
     return (
       <div
         role='alert'
         className='rounded-2xl border border-destructive/40 bg-destructive/10 p-6'
       >
-        <p className='text-sm text-destructive'>{getApiErrorMessage(error)}</p>
+        <p className='text-sm text-destructive'>
+          {getApiErrorMessage(profileQuery.error)}
+        </p>
 
         <Button
           type='button'
           variant='outline'
           className='mt-4'
-          onClick={() => {
-            void profileQuery.refetch();
-
-            if (username) {
-              void postsQuery.refetch();
-            }
-          }}
+          onClick={() => profileQuery.refetch()}
         >
           Coba lagi
         </Button>
@@ -82,222 +77,353 @@ export function MyProfile() {
     );
   }
 
-  if (!profileQuery.data) {
-    return null;
-  }
-
   const { profile, stats } = profileQuery.data.data;
-  const posts = postsQuery.data?.data.posts ?? [];
-  const pagination = postsQuery.data?.data.pagination;
-  const totalPages = Math.max(pagination?.totalPages ?? 1, 1);
 
-  const joinedAt = dayjs(profile.createdAt);
+  async function handleShare() {
+    const url = `${window.location.origin}/users/${encodeURIComponent(profile.username)}`;
 
-  const joinedLabel = joinedAt.isValid()
-    ? `Bergabung ${joinedAt.locale('id').format('MMMM YYYY')}`
-    : 'Tanggal bergabung tidak tersedia';
+    try {
+      if (typeof navigator.share === 'function') {
+        await navigator.share({ url, title: `Profil ${profile.name}` });
+      } else {
+        await navigator.clipboard.writeText(url);
+      }
 
-  if (isEditing) {
-    return (
-      <EditProfileForm
-        profile={profile}
-        onCancel={() => setIsEditing(false)}
-        onSaved={() => setIsEditing(false)}
-      />
-    );
+      setShared(true);
+      window.setTimeout(() => setShared(false), 2000);
+    } catch {
+      // Dibatalkan pengguna atau clipboard tidak tersedia.
+    }
   }
+
+  const statItems = [
+    { label: 'Postingan', value: stats.posts, href: null },
+    { label: 'Pengikut', value: stats.followers, href: '/me/followers' },
+    { label: 'Mengikuti', value: stats.following, href: '/me/following' },
+    { label: 'Disukai', value: stats.likes, href: '/me/likes' },
+  ];
 
   return (
-    <section aria-labelledby='my-profile-heading' className='space-y-6'>
-      <article className='overflow-hidden rounded-2xl border bg-card text-card-foreground shadow-sm'>
-        <div className='h-32 bg-gradient-to-r from-violet-950 via-violet-700 to-fuchsia-600' />
+    <section aria-labelledby='my-profile-heading' className='space-y-5'>
+      <div className='flex items-center gap-4'>
+        <Avatar className='size-16'>
+          {profile.avatarUrl ? (
+            <AvatarImage src={profile.avatarUrl} alt='' />
+          ) : null}
+          <AvatarFallback className='text-xl'>
+            {getInitial(profile.name)}
+          </AvatarFallback>
+        </Avatar>
 
-        <div className='px-5 pb-5'>
-          <AvatarUpload profile={profile} />
-
-          <div className='mt-4 flex flex-wrap items-start justify-between gap-4'>
-            <div>
-              <h1 id='my-profile-heading' className='text-3xl font-bold'>
-                {profile.name}
-              </h1>
-
-              <p className='mt-1 text-lg text-muted-foreground'>
-                @{profile.username}
-              </p>
-            </div>
-
-            <div className='flex flex-wrap gap-2'>
-              <Link
-                href='/me/saved'
-                prefetch={false}
-                className='inline-flex h-9 items-center justify-center rounded-md border bg-background px-4 text-sm font-medium transition hover:bg-accent'
-              >
-                Tersimpan
-              </Link>
-
-              <Link
-                href='/me/likes'
-                prefetch={false}
-                className='inline-flex h-9 items-center justify-center rounded-md border bg-background px-4 text-sm font-medium transition hover:bg-accent'
-              >
-                Disukai
-              </Link>
-
-              <Button
-                type='button'
-                variant='outline'
-                onClick={() => setIsEditing(true)}
-              >
-                Edit profil
-              </Button>
-            </div>
-          </div>
-
-          <p className='mt-4 max-w-lg leading-7'>
-            {profile.bio || 'Pengguna ini belum menambahkan bio.'}
+        <div className='min-w-0'>
+          <h1
+            id='my-profile-heading'
+            className='truncate text-lg font-bold leading-tight'
+          >
+            {profile.name}
+          </h1>
+          <p className='truncate text-sm text-muted-foreground'>
+            @{profile.username}
           </p>
-
-          <p className='mt-4 text-sm text-muted-foreground'>{joinedLabel}</p>
-
-          <dl className='mt-6 grid grid-cols-2 divide-x divide-y border-t pt-5 text-center sm:grid-cols-4 sm:divide-y-0'>
-            <div className='p-3'>
-              <dt className='text-sm text-muted-foreground'>Postingan</dt>
-              <dd className='mt-1 font-bold'>
-                <a
-                  href='#my-posts'
-                  className='rounded text-violet-500 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500'
-                  aria-label={`Lihat ${stats.posts} postingan`}
-                  onClick={(event) => {
-                    event.preventDefault();
-
-                    document.getElementById('my-posts')?.scrollIntoView({
-                      behavior: 'smooth',
-                      block: 'start',
-                    });
-                  }}
-                >
-                  {stats.posts}
-                </a>
-              </dd>
-            </div>
-
-            <div className='p-3'>
-              <dt className='text-sm text-muted-foreground'>Pengikut</dt>
-              <dd className='mt-1 font-bold'>
-                <Link
-                  href='/me/followers'
-                  prefetch={false}
-                  className='rounded text-violet-500 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500'
-                  aria-label={`Lihat ${stats.followers} pengikut`}
-                >
-                  {stats.followers}
-                </Link>
-              </dd>
-            </div>
-
-            <div className='p-3'>
-              <dt className='text-sm text-muted-foreground'>Mengikuti</dt>
-              <dd className='mt-1 font-bold'>
-                <Link
-                  href='/me/following'
-                  prefetch={false}
-                  className='rounded text-violet-500 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500'
-                  aria-label={`Lihat ${stats.following} akun yang diikuti`}
-                >
-                  {stats.following}
-                </Link>
-              </dd>
-            </div>
-
-            <div className='p-3'>
-              <dt className='text-sm text-muted-foreground'>Disukai</dt>
-              <dd className='mt-1 font-bold'>
-                <Link
-                  href='/me/likes'
-                  prefetch={false}
-                  className='rounded text-violet-500 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500'
-                  aria-label={`Lihat ${stats.likes} postingan disukai`}
-                >
-                  {stats.likes}
-                </Link>
-              </dd>
-            </div>
-          </dl>
-
-          <dl className='mt-5 grid gap-4 border-t pt-5 text-sm sm:grid-cols-2'>
-            <div>
-              <dt className='text-muted-foreground'>Email</dt>
-              <dd className='mt-1 break-all font-medium'>{profile.email}</dd>
-            </div>
-
-            <div>
-              <dt className='text-muted-foreground'>Nomor telepon</dt>
-              <dd className='mt-1 font-medium'>{profile.phone}</dd>
-            </div>
-          </dl>
         </div>
-      </article>
-
-      <div id='my-posts' className='scroll-mt-24'>
-        <h2 className='text-2xl font-bold'>Postingan saya</h2>
-        <p className='mt-1 text-sm text-muted-foreground'>
-          Postingan terbaru yang telah kamu bagikan.
-        </p>
       </div>
 
-      {posts.length > 0 ? (
-        <div className='space-y-5'>
-          {posts.map((post) => (
-            <ApiPostCard key={post.id} post={post} detailSource='profile' />
-          ))}
-        </div>
-      ) : (
-        <div className='rounded-2xl border bg-card p-8 text-center'>
-          <p className='font-medium'>Belum ada postingan</p>
-          <p className='mt-2 text-sm text-muted-foreground'>
-            Postingan yang kamu buat akan muncul di bagian ini.
-          </p>
+      <div className='flex items-center gap-3'>
+        <Link
+          href='/me/edit'
+          prefetch={false}
+          className={cn(
+            buttonVariants({ variant: 'outline' }),
+            'h-10 flex-1 rounded-full text-sm font-semibold'
+          )}
+        >
+          Edit Profil
+        </Link>
 
+        <Button
+          type='button'
+          variant='outline'
+          size='icon-lg'
+          className='size-10 rounded-full'
+          aria-label={shared ? 'Tautan profil disalin' : 'Bagikan profil'}
+          onClick={handleShare}
+        >
+          {shared ? <Check aria-hidden='true' /> : <Send aria-hidden='true' />}
+        </Button>
+      </div>
+
+      <p className='whitespace-pre-line text-sm leading-6'>
+        {profile.bio || 'Belum ada bio.'}
+      </p>
+
+      <dl className='grid grid-cols-4 text-center'>
+        {statItems.map((item) => {
+          const content = (
+            <>
+              <dd className='text-lg font-bold'>{item.value}</dd>
+              <dt className='text-xs text-muted-foreground'>{item.label}</dt>
+            </>
+          );
+
+          return item.href ? (
+            <Link
+              key={item.label}
+              href={item.href}
+              prefetch={false}
+              aria-label={`${item.value} ${item.label}`}
+              className='rounded-lg py-1 transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40'
+            >
+              {content}
+            </Link>
+          ) : (
+            <div key={item.label} className='py-1'>
+              {content}
+            </div>
+          );
+        })}
+      </dl>
+
+      <Tabs
+        value={tab}
+        onValueChange={(value) => setTab(value as TabValue)}
+        className='gap-4'
+      >
+        <TabsList aria-label='Konten profil'>
+          <TabsTrigger value='gallery'>
+            <LayoutGrid aria-hidden='true' />
+            Galeri
+          </TabsTrigger>
+          <TabsTrigger value='saved'>
+            <Bookmark aria-hidden='true' />
+            Tersimpan
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value='gallery'>
+          <GalleryGrid username={profile.username} />
+        </TabsContent>
+
+        <TabsContent value='saved'>
+          {tab === 'saved' ? <SavedGrid /> : null}
+        </TabsContent>
+      </Tabs>
+    </section>
+  );
+}
+
+function GalleryGrid({ username }: { username: string }) {
+  const query = useInfiniteQuery({
+    queryKey: ['posts', 'me-grid', username, TILES_PER_PAGE],
+    initialPageParam: 1,
+    queryFn: ({ pageParam }) =>
+      getUserPosts({ username, page: pageParam, limit: TILES_PER_PAGE }),
+    getNextPageParam: (lastPage) => {
+      const { page, totalPages } = lastPage.data.pagination;
+
+      return page < totalPages ? page + 1 : undefined;
+    },
+  });
+
+  const tiles = useMemo(
+    () => dedupeTiles(query.data?.pages.flatMap((page) => page.data.posts)),
+    [query.data]
+  );
+
+  return (
+    <TileGrid
+      tiles={tiles}
+      isPending={query.isPending}
+      error={query.isError && !query.data ? query.error : null}
+      hasNextPage={query.hasNextPage}
+      isFetchingNextPage={query.isFetchingNextPage}
+      fetchNextPageFailed={query.isFetchNextPageError}
+      onRetry={() => void query.refetch()}
+      onLoadMore={() => void query.fetchNextPage()}
+      hrefFor={(id) => `/posts/${id}?from=profile`}
+      empty={
+        <div className='flex flex-col items-center px-4 py-10 text-center'>
+          <p className='font-semibold'>Ceritamu dimulai di sini</p>
+          <p className='mt-2 max-w-xs text-sm text-muted-foreground'>
+            Bagikan postingan pertamamu dan tunjukkan momen yang berarti.
+          </p>
           <Link
             href='/posts/new'
             prefetch={false}
-            className='mt-5 inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition hover:bg-primary/90'
+            className={cn(
+              buttonVariants(),
+              'mt-5 h-10 rounded-full px-5 text-sm font-semibold'
+            )}
           >
-            Buat postingan
+            Unggah Postingan Pertama
           </Link>
         </div>
-      )}
+      }
+    />
+  );
+}
 
-      {posts.length > 0 ? (
-        <nav
-          aria-label='Navigasi postingan saya'
-          className='flex items-center justify-between gap-4 rounded-2xl border bg-card p-4'
+function SavedGrid() {
+  const query = useInfiniteQuery({
+    queryKey: ['posts', 'saved-grid', TILES_PER_PAGE],
+    initialPageParam: 1,
+    queryFn: ({ pageParam }) =>
+      getSavedPosts({ page: pageParam, limit: TILES_PER_PAGE }),
+    getNextPageParam: (lastPage) => {
+      const { page, totalPages } = lastPage.data.pagination;
+
+      return page < totalPages ? page + 1 : undefined;
+    },
+  });
+
+  const tiles = useMemo(
+    () => dedupeTiles(query.data?.pages.flatMap((page) => page.data.posts)),
+    [query.data]
+  );
+
+  return (
+    <TileGrid
+      tiles={tiles}
+      isPending={query.isPending}
+      error={query.isError && !query.data ? query.error : null}
+      hasNextPage={query.hasNextPage}
+      isFetchingNextPage={query.isFetchingNextPage}
+      fetchNextPageFailed={query.isFetchNextPageError}
+      onRetry={() => void query.refetch()}
+      onLoadMore={() => void query.fetchNextPage()}
+      hrefFor={(id) => `/posts/${id}?from=saved`}
+      empty={
+        <p className='px-4 py-10 text-center text-sm text-muted-foreground'>
+          Belum ada postingan yang disimpan.
+        </p>
+      }
+    />
+  );
+}
+
+function dedupeTiles(posts: GridTile[] | undefined) {
+  const seen = new Set<number>();
+  const tiles: GridTile[] = [];
+
+  for (const post of posts ?? []) {
+    if (!seen.has(post.id)) {
+      seen.add(post.id);
+      tiles.push(post);
+    }
+  }
+
+  return tiles;
+}
+
+type TileGridProps = {
+  tiles: GridTile[];
+  isPending: boolean;
+  error: unknown;
+  hasNextPage: boolean;
+  isFetchingNextPage: boolean;
+  fetchNextPageFailed: boolean;
+  onRetry: () => void;
+  onLoadMore: () => void;
+  hrefFor: (id: number) => string;
+  empty: ReactNode;
+};
+
+function TileGrid({
+  tiles,
+  isPending,
+  error,
+  hasNextPage,
+  isFetchingNextPage,
+  fetchNextPageFailed,
+  onRetry,
+  onLoadMore,
+  hrefFor,
+  empty,
+}: TileGridProps) {
+  if (isPending) {
+    return (
+      <div
+        role='status'
+        aria-label='Memuat postingan'
+        className='grid grid-cols-3 gap-1'
+      >
+        {Array.from({ length: 9 }, (_, index) => (
+          <Skeleton key={index} className='aspect-square rounded-md' />
+        ))}
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div
+        role='alert'
+        className='rounded-xl border border-destructive/40 bg-destructive/10 p-4'
+      >
+        <p className='text-sm text-destructive'>{getApiErrorMessage(error)}</p>
+        <Button
+          type='button'
+          variant='outline'
+          className='mt-3'
+          onClick={onRetry}
         >
-          <Button
-            type='button'
-            variant='outline'
-            disabled={page <= 1 || postsQuery.isFetching}
-            onClick={() =>
-              setPage((currentPage) => Math.max(currentPage - 1, 1))
-            }
-          >
-            Sebelumnya
-          </Button>
+          Coba lagi
+        </Button>
+      </div>
+    );
+  }
 
-          <p className='text-sm text-muted-foreground'>
-            Halaman {pagination?.page ?? page} dari {totalPages}
-          </p>
+  if (tiles.length === 0) {
+    return <>{empty}</>;
+  }
 
-          <Button
-            type='button'
-            variant='outline'
-            disabled={page >= totalPages || postsQuery.isFetching}
-            onClick={() => setPage((currentPage) => currentPage + 1)}
-          >
-            Berikutnya
-          </Button>
-        </nav>
+  return (
+    <div className='space-y-4'>
+      <ul className='grid grid-cols-3 gap-1'>
+        {tiles.map((tile) => (
+          <li key={tile.id}>
+            <Link
+              href={hrefFor(tile.id)}
+              prefetch={false}
+              className='block overflow-hidden rounded-md focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50'
+            >
+              <SafeImage
+                src={tile.imageUrl}
+                alt={tile.caption ? `Postingan: ${tile.caption}` : 'Postingan'}
+                className='aspect-square w-full bg-muted object-cover transition-opacity hover:opacity-80'
+                fallback={
+                  <div
+                    role='img'
+                    aria-label='Gambar tidak tersedia'
+                    className='flex aspect-square w-full items-center justify-center bg-muted text-xs text-muted-foreground'
+                  >
+                    Tidak tersedia
+                  </div>
+                }
+              />
+            </Link>
+          </li>
+        ))}
+      </ul>
+
+      {fetchNextPageFailed ? (
+        <p role='alert' className='text-center text-sm text-destructive'>
+          Gagal memuat postingan berikutnya.
+        </p>
       ) : null}
-    </section>
+
+      {hasNextPage ? (
+        <div className='flex justify-center'>
+          <Button
+            type='button'
+            variant='outline'
+            className='rounded-full'
+            disabled={isFetchingNextPage}
+            onClick={onLoadMore}
+          >
+            {isFetchingNextPage ? 'Memuat...' : 'Muat lebih banyak'}
+          </Button>
+        </div>
+      ) : null}
+    </div>
   );
 }

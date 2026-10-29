@@ -8,10 +8,27 @@ export async function getMyProfile() {
   return response.data;
 }
 
-export async function updateMyProfile(values: UpdateProfileFormValues) {
-  const response = await apiClient.patch('/api/me', values);
+// PATCH /api/me menerima multipart/form-data (name, username, phone, bio, avatar).
+export async function updateMyProfile(
+  values: UpdateProfileFormValues,
+  avatar?: File | null
+) {
+  const formData = new FormData();
+
+  formData.append('name', values.name);
+  formData.append('username', values.username);
+  formData.append('phone', values.phone);
+  formData.append('bio', values.bio);
+
+  if (avatar) {
+    formData.append('avatar', avatar);
+  }
+
+  const response = await apiClient.patch('/api/me', formData);
+
   return response.data;
 }
+
 export async function updateMyAvatar(file: File) {
   const formData = new FormData();
 
