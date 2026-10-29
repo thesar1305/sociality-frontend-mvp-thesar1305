@@ -60,12 +60,15 @@ export function ApiFeed() {
   const totalPages = Math.max(pagination.totalPages, 1);
 
   return (
-    <section aria-labelledby='feed-heading' className='space-y-5'>
+    <section aria-labelledby='feed-heading' className='space-y-6 sm:space-y-8'>
       <div>
-        <h1 id='feed-heading' className='text-3xl font-bold'>
+        <h1
+          id='feed-heading'
+          className='text-3xl font-bold tracking-tight sm:text-4xl'
+        >
           Feed
         </h1>
-        <p className='mt-2 text-muted-foreground'>
+        <p className='mt-2 max-w-xl leading-7 text-muted-foreground'>
           Postingan terbaru darimu dan pengguna yang kamu ikuti.
         </p>
       </div>
@@ -73,7 +76,7 @@ export function ApiFeed() {
       <CreatePostForm onCreated={() => setPage(1)} />
 
       {posts.length > 0 ? (
-        <div className='space-y-5'>
+        <div className='space-y-6'>
           {posts.map((post) => (
             <ApiPostCard key={post.id} post={post} />
           ))}
@@ -85,32 +88,36 @@ export function ApiFeed() {
         </div>
       )}
 
-      <nav
-        aria-label='Navigasi halaman postingan'
-        className='flex items-center justify-between gap-4 rounded-2xl border bg-card p-4'
-      >
-        <Button
-          type='button'
-          variant='outline'
-          disabled={page <= 1 || postsQuery.isFetching}
-          onClick={() => setPage((currentPage) => Math.max(currentPage - 1, 1))}
+      {totalPages > 1 ? (
+        <nav
+          aria-label='Navigasi halaman postingan'
+          className='flex items-center justify-between gap-3 rounded-2xl border bg-card p-4'
         >
-          Sebelumnya
-        </Button>
+          <Button
+            type='button'
+            variant='outline'
+            disabled={page <= 1 || postsQuery.isFetching}
+            onClick={() =>
+              setPage((currentPage) => Math.max(currentPage - 1, 1))
+            }
+          >
+            Sebelumnya
+          </Button>
 
-        <p className='text-sm text-muted-foreground'>
-          Halaman {pagination.page} dari {totalPages}
-        </p>
+          <p className='text-center text-sm text-muted-foreground'>
+            Halaman {pagination.page} dari {totalPages}
+          </p>
 
-        <Button
-          type='button'
-          variant='outline'
-          disabled={page >= totalPages || postsQuery.isFetching}
-          onClick={() => setPage((currentPage) => currentPage + 1)}
-        >
-          Berikutnya
-        </Button>
-      </nav>
+          <Button
+            type='button'
+            variant='outline'
+            disabled={page >= totalPages || postsQuery.isFetching}
+            onClick={() => setPage((currentPage) => currentPage + 1)}
+          >
+            Berikutnya
+          </Button>
+        </nav>
+      ) : null}
     </section>
   );
 }
