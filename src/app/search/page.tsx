@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 
 import { AppShell } from '@/components/sociality/app-shell';
-import { ProtectedRoute } from '@/components/sociality/protected-route';
 import { UserSearch } from '@/components/sociality/user-search';
 
 export const metadata: Metadata = {
@@ -11,10 +10,8 @@ export const metadata: Metadata = {
 
 export default function SearchPage() {
   return (
-    <ProtectedRoute>
-      <AppShell>
-        <UserSearch />
-      </AppShell>
-    </ProtectedRoute>
+    <AppShell>
+      <UserSearch />
+    </AppShell>
   );
 }

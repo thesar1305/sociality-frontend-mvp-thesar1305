@@ -2,7 +2,6 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
 import { AppShell } from '@/components/sociality/app-shell';
-import { ProtectedRoute } from '@/components/sociality/protected-route';
 import { PublicUserProfile } from '@/components/sociality/public-user-profile';
 
 export const metadata: Metadata = {
@@ -67,16 +66,14 @@ export default async function UserProfilePage({
     ? `/users/${encodeURIComponent(normalizedUsername)}?${profileQuery}`
     : `/users/${encodeURIComponent(normalizedUsername)}`;
   return (
-    <ProtectedRoute>
-      <AppShell>
-        <PublicUserProfile
-          username={normalizedUsername}
-          backHref={backHref}
-          backLabel={backLabel}
-          initialTab={initialTab}
-          profileReturnHref={profileReturnHref}
-        />
-      </AppShell>
-    </ProtectedRoute>
+    <AppShell>
+      <PublicUserProfile
+        username={normalizedUsername}
+        backHref={backHref}
+        backLabel={backLabel}
+        initialTab={initialTab}
+        profileReturnHref={profileReturnHref}
+      />
+    </AppShell>
   );
 }
