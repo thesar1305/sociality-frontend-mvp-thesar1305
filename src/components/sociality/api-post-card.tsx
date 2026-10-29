@@ -10,6 +10,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 import { PostComments, SafeImage } from '@/components/sociality/post-comments';
+import { PostLikersDialog } from '@/components/sociality/post-likers-dialog';
 import { getApiErrorMessage } from '@/lib/api/client';
 import {
   getSavedPosts,
@@ -347,14 +348,13 @@ export function ApiPostCard({
                 aria-hidden='true'
               />
             </button>
-            <Link
-              href={`/posts/${post.id}/likes`}
-              prefetch={false}
+            <PostLikersDialog
+              postId={post.id}
               className='rounded text-sm font-medium hover:underline focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40'
               aria-label={`Lihat ${likeCount} pengguna yang menyukai postingan ini`}
             >
               {likeCount}
-            </Link>
+            </PostLikersDialog>
           </span>
 
           <button
