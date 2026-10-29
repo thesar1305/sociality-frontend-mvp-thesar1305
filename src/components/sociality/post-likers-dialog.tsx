@@ -6,9 +6,9 @@ import {
   useQueryClient,
 } from '@tanstack/react-query';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
 import { type ReactNode, useMemo, useState } from 'react';
 
+import { LoginPromptDialog } from '@/components/sociality/login-prompt-dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
@@ -45,15 +45,14 @@ export function PostLikersDialog({
   children,
   ...triggerProps
 }: PostLikersDialogProps) {
-  const router = useRouter();
-  const pathname = usePathname();
   const { isAuthenticated, isHydrated } = useAppSelector((state) => state.auth);
   const [open, setOpen] = useState(false);
+  const [loginPromptOpen, setLoginPromptOpen] = useState(false);
 
   function handleOpenChange(nextOpen: boolean) {
     if (nextOpen && !isAuthenticated) {
       if (isHydrated) {
-        router.push(`/login?next=${encodeURIComponent(pathname)}`);
+        setLoginPromptOpen(true);
       }
 
       return;
@@ -63,22 +62,30 @@ export function PostLikersDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger className={className} {...triggerProps}>
-        {children}
-      </DialogTrigger>
+    <>
+      <Dialog open={open} onOpenChange={handleOpenChange}>
+        <DialogTrigger className={className} {...triggerProps}>
+          {children}
+        </DialogTrigger>
 
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Disukai oleh</DialogTitle>
-          <DialogDescription>
-            Pengguna yang menyukai postingan ini.
-          </DialogDescription>
-        </DialogHeader>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Disukai oleh</DialogTitle>
+            <DialogDescription>
+              Pengguna yang menyukai postingan ini.
+            </DialogDescription>
+          </DialogHeader>
 
-        <LikersList postId={postId} enabled={open} />
-      </DialogContent>
-    </Dialog>
+          <LikersList postId={postId} enabled={open} />
+        </DialogContent>
+      </Dialog>
+      <LoginPromptDialog
+        open={loginPromptOpen}
+        onOpenChange={setLoginPromptOpen}
+        title='Masuk untuk melihat'
+        description='Masuk atau daftar untuk melihat siapa saja yang menyukai postingan ini.'
+      />
+    </>
   );
 }
 

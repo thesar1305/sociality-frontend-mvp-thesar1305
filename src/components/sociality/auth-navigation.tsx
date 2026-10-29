@@ -9,6 +9,7 @@ import { Button, buttonVariants } from '@/components/ui/button';
 import { getMyProfile } from '@/lib/api/profile';
 import { removeAccessToken } from '@/lib/auth/storage';
 import { clearSession } from '@/lib/store/auth-slice';
+import { useHydrated } from '@/lib/hooks/use-hydrated';
 import { useAppDispatch, useAppSelector } from '@/lib/store/hooks';
 import { cn } from 'cn';
 
@@ -19,7 +20,11 @@ function getInitial(name?: string) {
 export function AuthNavigation() {
   const dispatch = useAppDispatch();
   const queryClient = useQueryClient();
-  const { isAuthenticated, isHydrated } = useAppSelector((state) => state.auth);
+  const { isAuthenticated, isHydrated: sessionReady } = useAppSelector(
+    (state) => state.auth
+  );
+  // Keep the first client render identical to the server HTML (skeleton).
+  const isHydrated = useHydrated() && sessionReady;
 
   const profileQuery = useQuery({
     queryKey: ['me'],

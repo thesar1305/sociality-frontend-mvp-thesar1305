@@ -45,6 +45,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
     <html
       lang='id'
       suppressHydrationWarning
+      data-scroll-behavior='smooth'
       className={`dark ${inter.variable} ${geistMono.variable}`}
     >
       <body className='min-h-screen bg-background font-sans text-foreground antialiased'>

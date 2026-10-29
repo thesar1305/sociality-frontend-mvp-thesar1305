@@ -6,9 +6,9 @@ import 'dayjs/locale/id';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { Bookmark, Check, Heart, MessageCircle, Send } from 'lucide-react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
 import { useState } from 'react';
 
+import { LoginPromptDialog } from '@/components/sociality/login-prompt-dialog';
 import {
   PostCommentsDialog,
   SafeImage,
@@ -59,12 +59,11 @@ export function ApiPostCard({
   detailReturnHref,
 }: ApiPostCardProps) {
   const queryClient = useQueryClient();
-  const router = useRouter();
-  const pathname = usePathname();
+  const [loginPromptOpen, setLoginPromptOpen] = useState(false);
   const { isAuthenticated, isHydrated } = useAppSelector((state) => state.auth);
 
   function redirectToLogin() {
-    router.push(`/login?next=${encodeURIComponent(pathname)}`);
+    setLoginPromptOpen(true);
   }
 
   const savedPostsQuery = useQuery({
@@ -452,6 +451,11 @@ export function ApiPostCard({
           ) : null}
         </div>
       ) : null}
+
+      <LoginPromptDialog
+        open={loginPromptOpen}
+        onOpenChange={setLoginPromptOpen}
+      />
     </article>
   );
 }

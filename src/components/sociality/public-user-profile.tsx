@@ -8,9 +8,9 @@ import {
 } from '@tanstack/react-query';
 import { ArrowLeft, Check, Heart, LayoutGrid } from 'lucide-react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 
+import { LoginPromptDialog } from '@/components/sociality/login-prompt-dialog';
 import {
   dedupeTiles,
   ProfileHeader,
@@ -53,8 +53,7 @@ export function PublicUserProfile({
 }: PublicUserProfileProps) {
   const [activeTab, setActiveTab] = useState<ProfileTab>(initialTab);
   const queryClient = useQueryClient();
-  const router = useRouter();
-  const pathname = usePathname();
+  const [loginPromptOpen, setLoginPromptOpen] = useState(false);
   const { isAuthenticated, isHydrated } = useAppSelector((state) => state.auth);
 
   const profileQueryKey = ['users', 'profile', username] as const;
@@ -186,7 +185,7 @@ export function PublicUserProfile({
   function handleFollow() {
     if (!isAuthenticated) {
       if (isHydrated) {
-        router.push(`/login?next=${encodeURIComponent(pathname)}`);
+        setLoginPromptOpen(true);
       }
 
       return;
@@ -332,6 +331,13 @@ export function PublicUserProfile({
           />
         </TabsContent>
       </Tabs>
+
+      <LoginPromptDialog
+        open={loginPromptOpen}
+        onOpenChange={setLoginPromptOpen}
+        title='Masuk untuk mengikuti'
+        description={`Masuk atau daftar untuk mengikuti ${profile.name} dan melihat aktivitasnya.`}
+      />
     </section>
   );
 }
