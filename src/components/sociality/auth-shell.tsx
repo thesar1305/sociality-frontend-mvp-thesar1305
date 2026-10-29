@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 
+import { BrandLogo } from '@/components/sociality/brand-logo';
 import { Label } from '@/components/ui/label';
 import { cn } from 'cn';
 
@@ -32,17 +33,8 @@ export function AuthShell({
           className
         )}
       >
-        <Link
-          href='/'
-          className='mb-6 flex items-center justify-center gap-2.5 text-xl font-bold tracking-tight'
-        >
-          <span
-            aria-hidden='true'
-            className='flex size-8 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground'
-          >
-            S
-          </span>
-          Sociality
+        <Link href='/' className='mb-6 flex justify-center'>
+          <BrandLogo />
         </Link>
 
         <h1 className='text-center text-2xl font-bold'>{title}</h1>

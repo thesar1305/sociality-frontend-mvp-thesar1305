@@ -1,5 +1,6 @@
 'use client';
 
+import { Moon, Sun } from 'lucide-react';
 import { useSyncExternalStore } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -47,12 +48,14 @@ export function ThemeToggle() {
   return (
     <Button
       type='button'
-      variant='outline'
-      size='sm'
+      variant='ghost'
+      size='icon-lg'
+      className='rounded-full'
       aria-label={isDark ? 'Aktifkan mode terang' : 'Aktifkan mode gelap'}
+      title={isDark ? 'Mode terang' : 'Mode gelap'}
       onClick={handleToggleTheme}
     >
-      {isDark ? 'Terang' : 'Gelap'}
+      {isDark ? <Sun aria-hidden='true' /> : <Moon aria-hidden='true' />}
     </Button>
   );
 }

@@ -1,26 +1,31 @@
 'use client';
 
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { LogOut } from 'lucide-react';
 import Link from 'next/link';
 
-import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button, buttonVariants } from '@/components/ui/button';
+import { getMyProfile } from '@/lib/api/profile';
 import { removeAccessToken } from '@/lib/auth/storage';
 import { clearSession } from '@/lib/store/auth-slice';
 import { useAppDispatch, useAppSelector } from '@/lib/store/hooks';
+import { cn } from 'cn';
 
-type AuthNavigationProps = {
-  showProfileLink?: boolean;
-};
+function getInitial(name?: string) {
+  return name?.trim().charAt(0).toUpperCase() || 'S';
+}
 
-const linkClassName =
-  'inline-flex h-8 items-center justify-center rounded-lg border bg-background px-3 text-sm font-medium transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50';
-
-export function AuthNavigation({
-  showProfileLink = true,
-}: AuthNavigationProps) {
+export function AuthNavigation() {
   const dispatch = useAppDispatch();
   const queryClient = useQueryClient();
   const { isAuthenticated, isHydrated } = useAppSelector((state) => state.auth);
+
+  const profileQuery = useQuery({
+    queryKey: ['me'],
+    queryFn: getMyProfile,
+    enabled: isHydrated && isAuthenticated,
+  });
 
   function handleLogout() {
     removeAccessToken();
@@ -32,39 +37,67 @@ export function AuthNavigation({
   if (!isHydrated) {
     return (
       <span
+        role='status'
         aria-label='Memuat sesi'
-        className='h-8 w-20 animate-pulse rounded-lg bg-muted'
+        className='h-10 w-24 animate-pulse rounded-full bg-muted'
       />
     );
   }
 
   if (!isAuthenticated) {
     return (
-      <>
-        <Link href='/login' className={linkClassName}>
+      <div className='flex items-center gap-2'>
+        <Link
+          href='/login'
+          className={cn(
+            buttonVariants({ variant: 'outline' }),
+            'h-10 rounded-full px-4'
+          )}
+        >
           Masuk
         </Link>
         <Link
           href='/register'
-          className='inline-flex h-8 items-center justify-center rounded-lg bg-violet-600 px-3 text-sm font-medium text-white transition-colors hover:bg-violet-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/50'
+          className={cn(buttonVariants(), 'h-10 rounded-full px-4')}
         >
           Daftar
         </Link>
-      </>
+      </div>
     );
   }
 
-  return (
-    <>
-      {showProfileLink ? (
-        <Link href='/me' className={linkClassName}>
-          Profil
-        </Link>
-      ) : null}
+  const profile = profileQuery.data?.data.profile;
 
-      <Button type='button' variant='outline' onClick={handleLogout}>
-        Keluar
+  return (
+    <div className='flex items-center gap-1'>
+      <Link
+        href='/me'
+        prefetch={false}
+        aria-label='Profil saya'
+        className='flex items-center gap-2.5 rounded-full p-1 pr-1 transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40 sm:pr-3'
+      >
+        <Avatar className='size-9'>
+          {profile?.avatarUrl ? (
+            <AvatarImage src={profile.avatarUrl} alt='' />
+          ) : null}
+          <AvatarFallback>{getInitial(profile?.name)}</AvatarFallback>
+        </Avatar>
+        <span className='hidden max-w-32 truncate text-sm font-semibold sm:inline'>
+          {profile?.name ?? ''}
+        </span>
+      </Link>
+
+      <Button
+        type='button'
+        variant='ghost'
+        size='icon-lg'
+        aria-label='Keluar'
+        title='Keluar'
+        className='rounded-full'
+        onClick={handleLogout}
+      >
+        <LogOut aria-hidden='true' />
       </Button>
-    </>
+    </div>
   );
 }
