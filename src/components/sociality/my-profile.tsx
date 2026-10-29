@@ -24,8 +24,12 @@ const TILES_PER_PAGE = 12;
 
 type TabValue = 'gallery' | 'saved';
 
-export function MyProfile() {
-  const [tab, setTab] = useState<TabValue>('gallery');
+type MyProfileProps = {
+  initialTab?: TabValue;
+};
+
+export function MyProfile({ initialTab = 'gallery' }: MyProfileProps) {
+  const [tab, setTab] = useState<TabValue>(initialTab);
 
   const profileQuery = useQuery({
     queryKey: ['me'],

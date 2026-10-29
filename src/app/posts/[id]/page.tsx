@@ -45,7 +45,7 @@ export default async function PostPage({
 
   const backHref =
     from === 'saved'
-      ? '/me/saved'
+      ? '/me?tab=saved'
       : from === 'liked'
         ? '/me/likes'
         : from === 'profile'

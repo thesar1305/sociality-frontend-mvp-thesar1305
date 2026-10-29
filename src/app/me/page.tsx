@@ -9,11 +9,21 @@ export const metadata: Metadata = {
   description: 'Profil pengguna Sociality.',
 };
 
-export default function MyProfilePage() {
+type MyProfilePageProps = {
+  searchParams: Promise<{
+    tab?: string;
+  }>;
+};
+
+export default async function MyProfilePage({
+  searchParams,
+}: MyProfilePageProps) {
+  const { tab } = await searchParams;
+
   return (
     <ProtectedRoute>
       <AppShell>
-        <MyProfile />
+        <MyProfile initialTab={tab === 'saved' ? 'saved' : 'gallery'} />
       </AppShell>
     </ProtectedRoute>
   );

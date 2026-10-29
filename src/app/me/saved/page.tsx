@@ -1,19 +1,6 @@
-import type { Metadata } from 'next';
+import { redirect } from 'next/navigation';
 
-import { AppShell } from '@/components/sociality/app-shell';
-import { ProtectedRoute } from '@/components/sociality/protected-route';
-import { SavedPosts } from '@/components/sociality/saved-posts';
-
-export const metadata: Metadata = {
-  title: 'Postingan Tersimpan | Sociality',
-};
-
+// Postingan tersimpan sekarang menjadi tab di halaman profil (/me).
 export default function SavedPostsPage() {
-  return (
-    <ProtectedRoute>
-      <AppShell>
-        <SavedPosts />
-      </AppShell>
-    </ProtectedRoute>
-  );
+  redirect('/me?tab=saved');
 }

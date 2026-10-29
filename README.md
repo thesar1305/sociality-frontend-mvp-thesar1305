@@ -1,55 +1,60 @@
 # Sociality Frontend MVP
 
-Sociality adalah MVP aplikasi media sosial berbasis frontend. Pengguna dapat membuat postingan, memberikan suka, menambahkan komentar, serta mengelola postingannya langsung dari browser.
+Frontend MVP aplikasi media sosial **Sociality** yang terhubung ke API
+`https://be-social-media-api-production.up.railway.app` (dokumentasi Swagger di
+`/api-swagger/`). Cakupan fitur mengikuti _Sociality Frontend MVP Guide_ dan
+desain Figma "Social Media".
 
 ## Fitur
 
-- Menampilkan feed postingan.
-- Membuat postingan baru dengan batas 280 karakter.
-- Memberikan dan membatalkan suka.
-- Menambahkan komentar dengan batas 180 karakter.
-- Mengedit postingan milik pengguna.
-- Menghapus postingan milik pengguna dengan konfirmasi.
-- Menampilkan halaman profil.
-- Menggunakan mode terang dan gelap.
-- Menyimpan aktivitas feed dan preferensi tema di browser.
-- Mendukung tampilan desktop dan perangkat berukuran kecil.
-- Menggunakan elemen formulir dan atribut aksesibilitas yang sesuai.
+- **Autentikasi:** daftar, masuk, sesi bertahan setelah refresh, keluar, dan
+  route privat yang dilindungi (redirect ke login dengan `next`).
+- **Feed:** timeline (diri sendiri + yang diikuti) dengan infinite scroll tanpa
+  duplikasi, state loading/kosong/error, dan retry.
+- **Postingan:** buat (drag & drop, preview, caption), detail, dan hapus milik
+  sendiri.
+- **Interaksi (optimistic UI):** suka, simpan, ikuti/berhenti mengikuti, serta
+  komentar (composer, emoji, hapus oleh pemilik komentar atau pemilik post).
+  Modal "Disukai oleh" tersedia di kartu dan halaman detail.
+- **Profil saya (`/me`):** statistik, tab Galeri/Tersimpan, edit profil
+  (avatar, nama, username, telepon, bio), halaman pengikut/mengikuti dan
+  postingan yang disukai.
+- **Pengguna lain:** pencarian dengan debounce, profil publik (tab
+  Postingan/Disukai), dan daftar pengikut/mengikuti. Bisa dibuka tanpa login;
+  aksi privat memunculkan dialog Masuk/Daftar.
+- **Lainnya:** toast, mode gelap/terang, gambar dioptimasi, fallback untuk
+  gambar yang gagal dimuat, dan analytics ringan.
 
 ## Teknologi
 
-- Next.js 16 App Router
-- React 19
-- TypeScript
-- Tailwind CSS 4
-- shadcn/ui dan Base UI
-- Geist Font
-- Browser Local Storage
+- Next.js 16 (App Router, Turbopack), React 19, TypeScript
+- Tailwind CSS 4, shadcn/ui (base-nova) dengan Base UI
+- Redux Toolkit (state sesi dan toast), TanStack Query (data server)
+- React Hook Form + Zod, Day.js, Axios
 
 ## Menjalankan Proyek
-
-Clone branch stabil proyek:
 
 ```bash
 git clone --branch recovery/sociality-clean https://github.com/thesar1305/sociality-frontend-mvp-thesar1305.git
 cd sociality-frontend-mvp-thesar1305
-```
-
-Instal dependencies:
-
-```bash
 npm install
 ```
 
-Jalankan development server:
+Buat `.env.local`:
+
+```bash
+NEXT_PUBLIC_API_BASE_URL=https://be-social-media-api-production.up.railway.app
+# Opsional: endpoint yang menerima event analytics (POST JSON via sendBeacon)
+# NEXT_PUBLIC_ANALYTICS_URL=
+```
+
+Jalankan development server lalu buka <http://localhost:3000>:
 
 ```bash
 npm run dev
 ```
 
-Buka [http://localhost:3000](http://localhost:3000) melalui browser.
-
-## Perintah Tersedia
+## Perintah
 
 | Perintah        | Kegunaan                                          |
 | --------------- | ------------------------------------------------- |
@@ -58,53 +63,59 @@ Buka [http://localhost:3000](http://localhost:3000) melalui browser.
 | `npm run build` | Memeriksa TypeScript dan membuat production build |
 | `npm run start` | Menjalankan production server setelah build       |
 
+## Rute
+
+| Rute                                          | Akses  | Keterangan                                   |
+| --------------------------------------------- | ------ | -------------------------------------------- |
+| `/login`, `/register`                         | Publik | Masuk dan daftar                             |
+| `/feed`                                       | Privat | Timeline                                     |
+| `/posts/new`                                  | Privat | Buat postingan                               |
+| `/posts/[id]`                                 | Publik | Detail postingan dan komentar                |
+| `/me`, `/me/edit`                             | Privat | Profil saya (`?tab=saved` untuk Tersimpan)   |
+| `/me/likes`, `/me/followers`, `/me/following` | Privat | Daftar milik saya                            |
+| `/search`                                     | Publik | Cari pengguna                                |
+| `/users/[username]`                           | Publik | Profil publik (`?tab=likes` untuk Disukai)   |
+| `/users/[username]/followers`, `/following`   | Privat | Daftar pengikut/mengikuti pengguna           |
+
+`/profile`, `/me/saved`, dan `/posts/[id]/likes` hanya mengalihkan ke halaman
+penggantinya agar tautan lama tetap berfungsi.
+
 ## Struktur Utama
 
 ```text
 src/
-|-- app/
-|   |-- profile/
-|   |   `-- page.tsx
-|   |-- globals.css
-|   |-- layout.tsx
-|   `-- page.tsx
+|-- app/            Rute App Router
 |-- components/
-|   |-- sociality/
-|   |   |-- post-card.tsx
-|   |   |-- social-feed.tsx
-|   |   `-- theme-toggle.tsx
-|   `-- ui/
-|       `-- button.tsx
-|-- data/
-|   |-- posts.ts
-|   `-- profile.ts
+|   |-- providers/  Redux, TanStack Query, bootstrap sesi
+|   |-- sociality/  Komponen fitur (feed, kartu post, profil, komentar, ...)
+|   `-- ui/         Primitif shadcn/ui
 |-- lib/
-|   `-- utils.ts
-`-- types/
-    |-- post.ts
-    `-- profile.ts
+|   |-- api/        Klien axios dan fungsi per endpoint
+|   |-- auth/       Penyimpanan token
+|   |-- hooks/      Hook bersama (mis. useHydrated)
+|   |-- store/      Redux slice (auth, toast)
+|   |-- validation/ Skema Zod
+|   |-- analytics.ts  track(event, props)
+|   `-- images.ts     Loader dan thumbnail Cloudinary
+`-- types/          Tipe respons API
 ```
 
-## Penyimpanan Data
+## Catatan Teknis
 
-MVP ini belum menggunakan backend atau database. Data berikut disimpan di Local Storage browser:
-
-- Postingan yang dibuat pengguna.
-- Perubahan isi postingan.
-- Status suka.
-- Komentar baru.
-- Penghapusan postingan.
-- Pilihan mode terang atau gelap.
-
-Karena penyimpanan bersifat lokal:
-
-- Data tidak tersinkron antarperangkat atau browser.
-- Data dapat hilang jika penyimpanan browser dibersihkan.
-- Belum tersedia autentikasi atau akun pengguna sebenarnya.
+- **Gambar:** URL dari API berada di Cloudinary dan dimuat lewat `next/image`
+  dengan `cloudinaryLoader` (`src/lib/images.ts`), sehingga browser mengambil
+  gambar langsung dari CDN. Avatar kecil memakai `avatarThumb()`.
+- **Analytics:** `track()` mengirim `CustomEvent` `sociality:analytics`,
+  mencetak ke konsol saat development, dan memakai `sendBeacon` bila
+  `NEXT_PUBLIC_ANALYTICS_URL` diisi. Event: `post_view`, `post_like`,
+  `post_unlike`, `post_save`, `post_unsave`, `user_follow`, `user_unfollow`,
+  `comment_submit`.
+- **Hydration:** komponen yang bergantung pada status sesi memakai
+  `useHydrated()` agar render pertama sama dengan HTML server.
 
 ## Verifikasi
 
-Sebelum membuat commit atau melakukan deployment, jalankan:
+Sebelum commit atau deployment:
 
 ```bash
 npm run lint
@@ -112,10 +123,6 @@ npm run build
 git diff --check
 ```
 
-## Branch Stabil
+## Branch
 
-Pengembangan dan deployment proyek ini menggunakan branch:
-
-```text
-recovery/sociality-clean
-```
+Pengembangan memakai branch `recovery/sociality-clean`.

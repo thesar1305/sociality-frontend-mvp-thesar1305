@@ -1,13 +1,4 @@
-import type { Metadata } from 'next';
-import { notFound } from 'next/navigation';
-
-import { AppShell } from '@/components/sociality/app-shell';
-import { PostLikers } from '@/components/sociality/post-likers';
-import { ProtectedRoute } from '@/components/sociality/protected-route';
-
-export const metadata: Metadata = {
-  title: 'Penyuka Postingan | Sociality',
-};
+import { notFound, redirect } from 'next/navigation';
 
 type PostLikersPageProps = {
   params: Promise<{
@@ -15,6 +6,7 @@ type PostLikersPageProps = {
   }>;
 };
 
+// Daftar penyuka sekarang berupa modal "Disukai oleh" di kartu & detail post.
 export default async function PostLikersPage({ params }: PostLikersPageProps) {
   const { id } = await params;
   const postId = Number(id);
@@ -23,11 +15,5 @@ export default async function PostLikersPage({ params }: PostLikersPageProps) {
     notFound();
   }
 
-  return (
-    <ProtectedRoute>
-      <AppShell>
-        <PostLikers postId={postId} />
-      </AppShell>
-    </ProtectedRoute>
-  );
+  redirect(`/posts/${postId}`);
 }

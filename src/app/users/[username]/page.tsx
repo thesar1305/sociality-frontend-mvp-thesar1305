@@ -14,8 +14,6 @@ type UserProfilePageProps = {
     username: string;
   }>;
   searchParams: Promise<{
-    from?: string;
-    postId?: string;
     tab?: string;
   }>;
 };
@@ -24,53 +22,22 @@ export default async function UserProfilePage({
   params,
   searchParams,
 }: UserProfilePageProps) {
-  const [{ username }, { from, postId, tab }] = await Promise.all([
-    params,
-    searchParams,
-  ]);
+  const [{ username }, { tab }] = await Promise.all([params, searchParams]);
   const normalizedUsername = username.trim();
-  const numericPostId = Number(postId);
-
-  const cameFromPostLikers =
-    from === 'post-likers' &&
-    Number.isInteger(numericPostId) &&
-    numericPostId > 0;
-
-  const backHref = cameFromPostLikers
-    ? `/posts/${numericPostId}/likes`
-    : '/search';
-
-  const backLabel = cameFromPostLikers
-    ? 'Kembali ke daftar penyuka'
-    : 'Kembali ke pencarian';
 
   if (!normalizedUsername) {
     notFound();
   }
+
   const initialTab = tab === 'likes' ? 'likes' : 'posts';
+  const profilePath = `/users/${encodeURIComponent(normalizedUsername)}`;
+  const profileReturnHref =
+    initialTab === 'likes' ? `${profilePath}?tab=likes` : profilePath;
 
-  const profileSearchParams = new URLSearchParams();
-
-  if (cameFromPostLikers) {
-    profileSearchParams.set('from', 'post-likers');
-    profileSearchParams.set('postId', String(numericPostId));
-  }
-
-  if (initialTab === 'likes') {
-    profileSearchParams.set('tab', 'likes');
-  }
-
-  const profileQuery = profileSearchParams.toString();
-
-  const profileReturnHref = profileQuery
-    ? `/users/${encodeURIComponent(normalizedUsername)}?${profileQuery}`
-    : `/users/${encodeURIComponent(normalizedUsername)}`;
   return (
     <AppShell>
       <PublicUserProfile
         username={normalizedUsername}
-        backHref={backHref}
-        backLabel={backLabel}
         initialTab={initialTab}
         profileReturnHref={profileReturnHref}
       />
