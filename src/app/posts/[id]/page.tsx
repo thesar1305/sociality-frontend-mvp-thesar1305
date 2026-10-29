@@ -3,7 +3,6 @@ import { notFound } from 'next/navigation';
 
 import { AppShell } from '@/components/sociality/app-shell';
 import { PostDetail } from '@/components/sociality/post-detail';
-import { ProtectedRoute } from '@/components/sociality/protected-route';
 
 export const metadata: Metadata = {
   title: 'Detail Postingan | Sociality',
@@ -65,10 +64,8 @@ export default async function PostPage({
             : 'Kembali ke feed';
 
   return (
-    <ProtectedRoute>
-      <AppShell>
-        <PostDetail postId={postId} backHref={backHref} backLabel={backLabel} />
-      </AppShell>
-    </ProtectedRoute>
+    <AppShell>
+      <PostDetail postId={postId} backHref={backHref} backLabel={backLabel} />
+    </AppShell>
   );
 }

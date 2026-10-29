@@ -4,6 +4,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import 'dayjs/locale/id';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { type FormEvent, type ReactNode, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -14,10 +16,12 @@ import {
   getPostComments,
 } from '@/lib/api/comments';
 import { getMyProfile } from '@/lib/api/profile';
+import { useAppSelector } from '@/lib/store/hooks';
 import type { ApiComment, CommentsResponse } from '@/types/comment';
 
 type PostCommentsProps = {
   postId: number;
+  postAuthorId?: number;
   commentCount: number;
 };
 
@@ -62,8 +66,15 @@ export function SafeImage({ src, alt, className, fallback }: SafeImageProps) {
   );
 }
 
-export function PostComments({ postId, commentCount }: PostCommentsProps) {
+export function PostComments({
+  postId,
+  postAuthorId,
+  commentCount,
+}: PostCommentsProps) {
   const queryClient = useQueryClient();
+  const pathname = usePathname();
+  const { isAuthenticated, isHydrated } = useAppSelector((state) => state.auth);
+  const isGuest = isHydrated && !isAuthenticated;
 
   const [isOpen, setIsOpen] = useState(false);
   const [page, setPage] = useState(1);
@@ -84,9 +95,20 @@ export function PostComments({ postId, commentCount }: PostCommentsProps) {
     queryKey: ['me'],
     queryFn: getMyProfile,
     staleTime: 5 * 60 * 1000,
+    enabled: isAuthenticated,
   });
 
   const currentUserId = profileQuery.data?.data.profile.id;
+
+  // API: komentar boleh dihapus oleh pemilik komentar atau pemilik post.
+  function canDeleteComment(comment: ApiComment) {
+    return (
+      comment.id > 0 &&
+      currentUserId !== undefined &&
+      (comment.author.id === currentUserId || postAuthorId === currentUserId)
+    );
+  }
+
   const addCommentMutation = useMutation({
     mutationFn: (commentText: string) => addPostComment(postId, commentText),
 
@@ -344,7 +366,7 @@ export function PostComments({ postId, commentCount }: PostCommentsProps) {
                               {createdLabel}
                             </time>
 
-                            {comment.author.id === currentUserId && comment.id > 0 ? (
+                            {canDeleteComment(comment) ? (
                               <Button
                                 type='button'
                                 variant='ghost'
@@ -414,52 +436,64 @@ export function PostComments({ postId, commentCount }: PostCommentsProps) {
             </nav>
           ) : null}
 
-          <form className='space-y-2 border-t pt-4' onSubmit={handleSubmit}>
-            <label htmlFor={`comment-${postId}`} className='font-medium'>
-              Tambahkan komentar
-            </label>
-
-            <textarea
-              id={`comment-${postId}`}
-              rows={3}
-              maxLength={COMMENT_MAX_LENGTH}
-              value={text}
-              placeholder='Tulis komentarmu...'
-              className='w-full resize-y rounded-xl border bg-background px-4 py-3 text-sm outline-none transition focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20'
-              onChange={(event) => {
-                setText(event.target.value);
-                setSuccessMessage(null);
-              }}
-            />
-
-            <div className='flex flex-wrap items-center justify-between gap-3'>
-              <span className='text-xs text-muted-foreground'>
-                {text.length}/{COMMENT_MAX_LENGTH}
-              </span>
-
-              <Button
-                type='submit'
-                disabled={!text.trim() || addCommentMutation.isPending}
+          {isGuest ? (
+            <p className='border-t pt-4 text-sm text-muted-foreground'>
+              <Link
+                href={`/login?next=${encodeURIComponent(pathname)}`}
+                className='font-medium text-violet-500 hover:underline'
               >
-                Kirim komentar
-              </Button>
-            </div>
+                Masuk
+              </Link>{' '}
+              untuk menambahkan komentar.
+            </p>
+          ) : (
+            <form className='space-y-2 border-t pt-4' onSubmit={handleSubmit}>
+              <label htmlFor={`comment-${postId}`} className='font-medium'>
+                Tambahkan komentar
+              </label>
 
-            {addCommentMutation.isError ? (
-              <p role='alert' className='text-sm text-destructive'>
-                {getApiErrorMessage(addCommentMutation.error)}
-              </p>
-            ) : null}
+              <textarea
+                id={`comment-${postId}`}
+                rows={3}
+                maxLength={COMMENT_MAX_LENGTH}
+                value={text}
+                placeholder='Tulis komentarmu...'
+                className='w-full resize-y rounded-xl border bg-background px-4 py-3 text-sm outline-none transition focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20'
+                onChange={(event) => {
+                  setText(event.target.value);
+                  setSuccessMessage(null);
+                }}
+              />
 
-            {successMessage ? (
-              <p
-                role='status'
-                className='text-sm text-emerald-600 dark:text-emerald-400'
-              >
-                {successMessage}
-              </p>
-            ) : null}
-          </form>
+              <div className='flex flex-wrap items-center justify-between gap-3'>
+                <span className='text-xs text-muted-foreground'>
+                  {text.length}/{COMMENT_MAX_LENGTH}
+                </span>
+
+                <Button
+                  type='submit'
+                  disabled={!text.trim() || addCommentMutation.isPending}
+                >
+                  Kirim komentar
+                </Button>
+              </div>
+
+              {addCommentMutation.isError ? (
+                <p role='alert' className='text-sm text-destructive'>
+                  {getApiErrorMessage(addCommentMutation.error)}
+                </p>
+              ) : null}
+
+              {successMessage ? (
+                <p
+                  role='status'
+                  className='text-sm text-emerald-600 dark:text-emerald-400'
+                >
+                  {successMessage}
+                </p>
+              ) : null}
+            </form>
+          )}
         </div>
       ) : null}
     </div>

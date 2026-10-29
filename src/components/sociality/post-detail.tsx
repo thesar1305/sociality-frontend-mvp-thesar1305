@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { getApiErrorMessage } from '@/lib/api/client';
 import { deletePost, getPostDetail } from '@/lib/api/posts';
 import { getMyProfile } from '@/lib/api/profile';
+import { useAppSelector } from '@/lib/store/hooks';
 
 type PostDetailProps = {
   postId: number;
@@ -20,6 +21,7 @@ type PostDetailProps = {
 export function PostDetail({ postId, backHref, backLabel }: PostDetailProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
 
   const postQuery = useQuery({
     queryKey: ['posts', 'detail', postId],
@@ -29,6 +31,7 @@ export function PostDetail({ postId, backHref, backLabel }: PostDetailProps) {
   const profileQuery = useQuery({
     queryKey: ['me'],
     queryFn: getMyProfile,
+    enabled: isAuthenticated,
   });
 
   const deleteMutation = useMutation({

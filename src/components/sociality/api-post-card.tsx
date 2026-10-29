@@ -5,6 +5,7 @@ import dayjs from 'dayjs';
 import 'dayjs/locale/id';
 import { Bookmark } from 'lucide-react';
 import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 import { PostComments, SafeImage } from '@/components/sociality/post-comments';
@@ -17,6 +18,7 @@ import {
   unlikePost,
   unsavePost,
 } from '@/lib/api/posts';
+import { useAppSelector } from '@/lib/store/hooks';
 import type { ApiPost, PostsResponse } from '@/types/feed';
 
 type ApiPostCardProps = {
@@ -45,6 +47,13 @@ export function ApiPostCard({
   detailReturnHref,
 }: ApiPostCardProps) {
   const queryClient = useQueryClient();
+  const router = useRouter();
+  const pathname = usePathname();
+  const { isAuthenticated, isHydrated } = useAppSelector((state) => state.auth);
+
+  function redirectToLogin() {
+    router.push(`/login?next=${encodeURIComponent(pathname)}`);
+  }
 
   const savedPostsQuery = useQuery({
     queryKey: ['posts', 'saved', 'lookup'],
@@ -54,6 +63,7 @@ export function ApiPostCard({
         limit: 50,
       }),
     staleTime: 30_000,
+    enabled: isAuthenticated,
   });
 
   const serverSaved =
@@ -158,12 +168,28 @@ export function ApiPostCard({
   });
 
   function handleLike() {
+    if (!isAuthenticated) {
+      if (isHydrated) {
+        redirectToLogin();
+      }
+
+      return;
+    }
+
     if (!likeMutation.isPending) {
       likeMutation.mutate(!isLiked);
     }
   }
 
   function handleSave() {
+    if (!isAuthenticated) {
+      if (isHydrated) {
+        redirectToLogin();
+      }
+
+      return;
+    }
+
     if (
       !savedPostsQuery.isPending &&
       !savedPostsQuery.isError &&
@@ -239,7 +265,10 @@ export function ApiPostCard({
                 ? `Batalkan simpan postingan ${post.author.name}`
                 : `Simpan postingan ${post.author.name}`
             }
-            disabled={savedPostsQuery.isPending || savedPostsQuery.isError}
+            disabled={
+              isAuthenticated &&
+              (savedPostsQuery.isPending || savedPostsQuery.isError)
+            }
             onClick={handleSave}
           >
             <Bookmark
@@ -306,7 +335,11 @@ export function ApiPostCard({
           </p>
         ) : null}
 
-        <PostComments postId={post.id} commentCount={post.commentCount} />
+        <PostComments
+          postId={post.id}
+          postAuthorId={post.author.id}
+          commentCount={post.commentCount}
+        />
       </div>
     </article>
   );
