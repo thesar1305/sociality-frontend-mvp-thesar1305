@@ -3,11 +3,12 @@
 import { Home, Plus, Search, UserRound } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { type ReactNode, useEffect } from 'react';
+import type { ReactNode } from 'react';
 
 import { AuthNavigation } from '@/components/sociality/auth-navigation';
 import { BrandLogo } from '@/components/sociality/brand-logo';
 import { ThemeToggle } from '@/components/sociality/theme-toggle';
+import { ToastViewport } from '@/components/sociality/toast-viewport';
 import { cn } from 'cn';
 
 type AppShellProps = {
@@ -21,28 +22,8 @@ export function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();
   const router = useRouter();
 
-  useEffect(() => {
-    if (pathname === '/feed' && window.location.hash === '#create-post') {
-      window.requestAnimationFrame(() => {
-        document.getElementById('create-post')?.scrollIntoView({
-          behavior: 'smooth',
-          block: 'start',
-        });
-      });
-    }
-  }, [pathname]);
-
   function handleCreatePostClick() {
-    if (pathname === '/feed') {
-      document.getElementById('create-post')?.scrollIntoView({
-        behavior: 'smooth',
-        block: 'start',
-      });
-
-      return;
-    }
-
-    router.push('/feed#create-post');
+    router.push('/posts/new');
   }
 
   const feedIsActive = pathname === '/feed';
@@ -93,9 +74,11 @@ export function AppShell({ children }: AppShellProps) {
         </div>
       </header>
 
-      <main className='mx-auto w-full max-w-2xl px-4 py-6 pb-[calc(8rem+env(safe-area-inset-bottom))] sm:px-6 sm:py-8'>
+      <main className='mx-auto w-full max-w-2xl px-4 pt-6 pb-[calc(8rem+env(safe-area-inset-bottom))] sm:px-6 sm:pt-8'>
         {children}
       </main>
+
+      <ToastViewport />
 
       <nav
         aria-label='Navigasi utama'

@@ -2,8 +2,12 @@
 'use client';
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { ArrowLeft, ImagePlus, Trash2, Upload } from 'lucide-react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   type ChangeEvent,
+  type DragEvent,
   type FormEvent,
   useEffect,
   useRef,
@@ -11,26 +15,30 @@ import {
 } from 'react';
 
 import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { getApiErrorMessage } from '@/lib/api/client';
 import { createPost } from '@/lib/api/posts';
+import { useAppDispatch } from '@/lib/store/hooks';
+import { showToast } from '@/lib/store/toast-slice';
 import {
   POST_CAPTION_MAX_LENGTH,
   validatePostImage,
 } from '@/lib/validation/post';
+import { cn } from 'cn';
 
-type CreatePostFormProps = {
-  onCreated?: () => void;
-};
-
-export function CreatePostForm({ onCreated }: CreatePostFormProps) {
+export function CreatePostForm() {
   const queryClient = useQueryClient();
+  const router = useRouter();
+  const dispatch = useAppDispatch();
   const inputRef = useRef<HTMLInputElement>(null);
 
   const [image, setImage] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [caption, setCaption] = useState('');
+  const [imageError, setImageError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
 
   useEffect(() => {
     return () => {
@@ -43,70 +51,65 @@ export function CreatePostForm({ onCreated }: CreatePostFormProps) {
   const createMutation = useMutation({
     mutationFn: createPost,
     onSuccess: async () => {
-      setImage(null);
-      setPreviewUrl(null);
-      setCaption('');
-      setFormError(null);
-      setSuccessMessage('Postingan berhasil dibuat.');
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['posts'] }),
+        queryClient.invalidateQueries({ queryKey: ['me'] }),
+      ]);
 
-      if (inputRef.current) {
-        inputRef.current.value = '';
-      }
-
-      await queryClient.invalidateQueries({
-        queryKey: ['posts'],
-      });
-
-      onCreated?.();
+      dispatch(showToast({ message: 'Postingan berhasil dibagikan.' }));
+      router.push('/feed');
     },
     onError: (error) => {
-      setSuccessMessage(null);
       setFormError(getApiErrorMessage(error));
     },
   });
 
-  function handleImageChange(event: ChangeEvent<HTMLInputElement>) {
-    const selectedImage = event.target.files?.[0];
-
+  function selectImage(file: File | undefined) {
     setFormError(null);
-    setSuccessMessage(null);
 
-    if (!selectedImage) {
+    if (!file) {
       return;
     }
 
-    const validationError = validatePostImage(selectedImage);
+    const validationError = validatePostImage(file);
 
     if (validationError) {
       setImage(null);
       setPreviewUrl(null);
-      setFormError(validationError);
-      event.target.value = '';
+      setImageError(validationError);
       return;
     }
 
-    setImage(selectedImage);
-    setPreviewUrl(URL.createObjectURL(selectedImage));
+    setImageError(null);
+    setImage(file);
+    setPreviewUrl(URL.createObjectURL(file));
+  }
+
+  function handleImageChange(event: ChangeEvent<HTMLInputElement>) {
+    selectImage(event.target.files?.[0]);
+    event.target.value = '';
+  }
+
+  function handleDrop(event: DragEvent<HTMLButtonElement>) {
+    event.preventDefault();
+    setIsDragging(false);
+    selectImage(event.dataTransfer.files?.[0]);
   }
 
   function removeImage() {
     setImage(null);
     setPreviewUrl(null);
+    setImageError(null);
     setFormError(null);
-
-    if (inputRef.current) {
-      inputRef.current.value = '';
-    }
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     setFormError(null);
-    setSuccessMessage(null);
 
     if (!image) {
-      setFormError('Pilih gambar sebelum membuat postingan.');
+      setImageError('Pilih gambar sebelum membagikan postingan.');
       return;
     }
 
@@ -116,95 +119,144 @@ export function CreatePostForm({ onCreated }: CreatePostFormProps) {
     });
   }
 
+  const isPending = createMutation.isPending;
+
   return (
-    <section
-      id='create-post'
-      className='scroll-mt-24 rounded-2xl border bg-card p-5 text-card-foreground shadow-sm'
-    >
-      <div>
-        <h2 className='text-xl font-bold'>Buat postingan</h2>
-        <p className='mt-1 text-sm text-muted-foreground'>
-          Bagikan gambar dan cerita kepada komunitas.
-        </p>
+    <section aria-labelledby='create-post-heading' className='space-y-6'>
+      <div className='flex items-center gap-3'>
+        <Link
+          href='/feed'
+          prefetch={false}
+          aria-label='Kembali ke beranda'
+          className='flex size-9 items-center justify-center rounded-full transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40'
+        >
+          <ArrowLeft className='size-5' aria-hidden='true' />
+        </Link>
+        <h1 id='create-post-heading' className='text-xl font-bold'>
+          Tambah Postingan
+        </h1>
       </div>
 
-      <form className='mt-5 space-y-4' onSubmit={handleSubmit}>
+      <form className='space-y-5' onSubmit={handleSubmit} noValidate>
         <input
           ref={inputRef}
           type='file'
           accept='image/png,image/jpeg,image/webp'
           className='sr-only'
+          tabIndex={-1}
+          aria-hidden='true'
           onChange={handleImageChange}
         />
 
-        {previewUrl ? (
-          <div className='overflow-hidden rounded-2xl border bg-muted'>
-            <img
-              src={previewUrl}
-              alt='Pratinjau gambar postingan'
-              className='max-h-[32rem] w-full object-contain'
-            />
-          </div>
-        ) : (
-          <button
-            type='button'
-            className='flex min-h-48 w-full flex-col items-center justify-center rounded-2xl border border-dashed bg-muted/30 px-6 text-center transition hover:bg-muted/60'
-            onClick={() => inputRef.current?.click()}
-          >
-            <span className='font-semibold'>Pilih gambar</span>
-            <span className='mt-2 text-sm text-muted-foreground'>
-              PNG, JPG, atau WEBP maksimal 5 MB
-            </span>
-          </button>
-        )}
+        <div className='space-y-2'>
+          <Label id='post-photo-label'>Foto</Label>
 
-        {image ? (
-          <div className='flex flex-wrap items-center justify-between gap-3'>
-            <p className='min-w-0 truncate text-sm text-muted-foreground'>
-              {image.name}
-            </p>
+          {previewUrl ? (
+            <div className='space-y-3'>
+              <div className='overflow-hidden rounded-xl border border-border bg-muted'>
+                <img
+                  src={previewUrl}
+                  alt='Pratinjau gambar postingan'
+                  className='max-h-[28rem] w-full object-contain'
+                />
+              </div>
 
-            <div className='flex gap-2'>
-              <Button
-                type='button'
-                variant='outline'
-                disabled={createMutation.isPending}
-                onClick={() => inputRef.current?.click()}
-              >
-                Ganti
-              </Button>
+              <div className='flex flex-wrap items-center justify-center gap-3'>
+                <Button
+                  type='button'
+                  variant='outline'
+                  className='rounded-lg'
+                  disabled={isPending}
+                  onClick={() => inputRef.current?.click()}
+                >
+                  <ImagePlus aria-hidden='true' />
+                  Ganti gambar
+                </Button>
 
-              <Button
-                type='button'
-                variant='outline'
-                disabled={createMutation.isPending}
-                onClick={removeImage}
-              >
-                Hapus
-              </Button>
+                <Button
+                  type='button'
+                  variant='outline'
+                  className='rounded-lg text-destructive hover:text-destructive'
+                  disabled={isPending}
+                  onClick={removeImage}
+                >
+                  <Trash2 aria-hidden='true' />
+                  Hapus gambar
+                </Button>
+              </div>
+
+              {image ? (
+                <p className='truncate text-center text-xs text-muted-foreground'>
+                  {image.name}
+                </p>
+              ) : null}
             </div>
-          </div>
-        ) : null}
+          ) : (
+            <button
+              type='button'
+              aria-labelledby='post-photo-label'
+              aria-describedby={
+                imageError ? 'post-photo-hint post-photo-error' : 'post-photo-hint'
+              }
+              className={cn(
+                'flex min-h-40 w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed bg-muted/30 px-6 py-8 text-center transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40',
+                imageError
+                  ? 'border-destructive'
+                  : isDragging
+                    ? 'border-ring bg-muted/60'
+                    : 'border-input'
+              )}
+              onClick={() => inputRef.current?.click()}
+              onDragOver={(event) => {
+                event.preventDefault();
+                setIsDragging(true);
+              }}
+              onDragLeave={() => setIsDragging(false)}
+              onDrop={handleDrop}
+            >
+              <span className='flex size-10 items-center justify-center rounded-lg border border-border bg-muted'>
+                <Upload className='size-5' aria-hidden='true' />
+              </span>
+              <span className='text-sm'>
+                <span className='font-semibold text-brand-200'>
+                  Klik untuk unggah
+                </span>{' '}
+                atau seret dan lepas
+              </span>
+              <span
+                id='post-photo-hint'
+                className='text-xs text-muted-foreground'
+              >
+                PNG, JPG, atau WEBP (maks. 5 MB)
+              </span>
+            </button>
+          )}
 
-        <div>
-          <label htmlFor='post-caption' className='mb-2 block font-medium'>
-            Caption
-          </label>
+          {imageError ? (
+            <p
+              id='post-photo-error'
+              role='alert'
+              className='text-sm text-destructive'
+            >
+              {imageError}
+            </p>
+          ) : null}
+        </div>
 
-          <textarea
+        <div className='space-y-2'>
+          <Label htmlFor='post-caption'>Caption</Label>
+
+          <Textarea
             id='post-caption'
             rows={4}
             maxLength={POST_CAPTION_MAX_LENGTH}
             value={caption}
-            placeholder='Ceritakan sesuatu...'
-            className='w-full resize-y rounded-xl border bg-background px-4 py-3 outline-none transition focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20'
-            onChange={(event) => {
-              setCaption(event.target.value);
-              setSuccessMessage(null);
-            }}
+            placeholder='Tulis caption...'
+            disabled={isPending}
+            onChange={(event) => setCaption(event.target.value)}
           />
 
-          <p className='mt-1 text-right text-xs text-muted-foreground'>
+          <p className='text-right text-xs text-muted-foreground'>
             {caption.length}/{POST_CAPTION_MAX_LENGTH}
           </p>
         </div>
@@ -212,27 +264,18 @@ export function CreatePostForm({ onCreated }: CreatePostFormProps) {
         {formError ? (
           <p
             role='alert'
-            className='rounded-xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive'
+            className='rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive'
           >
             {formError}
           </p>
         ) : null}
 
-        {successMessage ? (
-          <p
-            role='status'
-            className='rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-700 dark:text-emerald-400'
-          >
-            {successMessage}
-          </p>
-        ) : null}
-
         <Button
           type='submit'
-          className='w-full'
-          disabled={!image || createMutation.isPending}
+          className='h-11 w-full rounded-full text-base font-semibold'
+          disabled={isPending}
         >
-          {createMutation.isPending ? 'Mengunggah...' : 'Buat postingan'}
+          {isPending ? 'Mengunggah...' : 'Bagikan'}
         </Button>
       </form>
     </section>

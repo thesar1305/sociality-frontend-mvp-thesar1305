@@ -4,7 +4,6 @@ import { useInfiniteQuery } from '@tanstack/react-query';
 import { useEffect, useMemo, useRef } from 'react';
 
 import { ApiPostCard } from '@/components/sociality/api-post-card';
-import { CreatePostForm } from '@/components/sociality/create-post-form';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getApiErrorMessage } from '@/lib/api/client';
@@ -113,8 +112,6 @@ export function ApiFeed() {
       <h1 id='feed-heading' className='sr-only'>
         Beranda
       </h1>
-
-      <CreatePostForm />
 
       {postsQuery.isPending ? <FeedSkeleton /> : null}
 
